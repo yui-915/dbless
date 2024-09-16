@@ -2,6 +2,8 @@
 name = "dbless"
 version = "0.0.1"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "simple key-value store"
 
 [dependencies]
 redb = "2.1.3"
