@@ -230,10 +230,26 @@ mod tests {
     fn test_database(mut db: Database) {
         // empty database
         assert_eq!(db.get::<u32>("test"), None);
+        assert!(db.is_empty());
+        assert_eq!(db.len(), 0);
+        assert_eq!(db.keys().len(), 0);
+        assert_eq!(db.values::<u32>(), vec![]);
+        assert_eq!(db.entries::<String>(), vec![]);
+        assert!(!db.contains_key("test"));
 
         // set and get
         assert_eq!(db.set("test", &69_u32), Some(()));
         assert_eq!(db.get::<u32>("test"), Some(69_u32));
+        assert!(!db.is_empty());
+        assert_eq!(db.len(), 1);
+        assert_eq!(db.size(), 1);
+        assert_eq!(db.keys(), vec!["test"]);
+        assert_eq!(db.values::<u32>(), vec![69_u32]);
+        assert_eq!(db.entries::<u32>(), vec![("test".to_string(), 69_u32)]);
+        assert!(db.contains_key("test"));
+        assert!(db.contains("test"));
+        assert!(!db.contains("test2"));
+        assert!(db.has("test"));
 
         assert_eq!(db.set("test2", &"hello world"), Some(()));
         assert_eq!(db.get::<String>("test2"), Some("hello world".to_string()));
@@ -241,10 +257,42 @@ mod tests {
 
         // wrong type
         assert_eq!(db.get::<i32>("test2"), None);
+
+        // keys, values, entries
+        assert_eq!(db.keys().sort(), ["test", "test2"].sort());
+        assert_eq!(db.values::<u32>(), vec![69_u32]);
+        assert_eq!(
+            db.entries::<String>(),
+            vec![("test2".to_string(), "hello world".to_string())]
+        );
+
+        // remove
+        assert_eq!(db.remove("test3"), None);
+        assert_eq!(db.remove("test2"), Some(()));
+        assert_eq!(db.get::<String>("test2"), None);
+
+        // empty again
+        assert_eq!(db.clear(), Some(()));
+        assert_eq!(db.clear(), None);
+        assert!(db.is_empty());
+        assert_eq!(db.len(), 0);
+        assert_eq!(db.keys().len(), 0);
+        assert_eq!(db.values::<u32>(), vec![]);
+        assert_eq!(db.entries::<String>(), vec![]);
+        assert!(!db.contains_key("test"));
+
+        // for later
+        assert_eq!(db.set("test3", &"hello world"), Some(()));
+        assert_eq!(db.set("test", &69_u32), Some(()));
     }
 
     fn test_existing_database(db: Database) {
-        assert_eq!(db.get::<String>("test2"), Some("hello world".to_string()));
+        assert_eq!(db.len(), 2);
+        assert_eq!(db.keys(), vec!["test", "test3"]);
+        assert_eq!(db.values::<u32>(), vec![69_u32]);
+        assert_eq!(db.entries::<u32>(), vec![("test".to_string(), 69_u32)]);
+        assert_eq!(db.get::<String>("test3"), Some("hello world".to_string()));
         assert_eq!(db.get::<u32>("test"), Some(69_u32));
+        assert!(!db.is_empty());
     }
 }
