@@ -140,8 +140,7 @@ impl DatabaseInterface for Database {
                 let keys = table
                     .iter()
                     .ok()?
-                    .filter(|e| e.is_ok())
-                    .map(|e| e.unwrap())
+                    .flatten()
                     .map(|(k, _)| k.value().to_string())
                     .collect();
                 Some(keys)
@@ -152,12 +151,7 @@ impl DatabaseInterface for Database {
     }
 
     fn values<T: DeserializeOwned>(&self) -> Vec<T> {
-        self.keys()
-            .iter()
-            .map(|k| self.get(k))
-            .filter(|e| e.is_some())
-            .map(|e| e.unwrap())
-            .collect()
+        self.keys().iter().filter_map(|k| self.get(k)).collect()
     }
 
     fn entries<T: DeserializeOwned>(&self) -> Vec<(String, T)> {
