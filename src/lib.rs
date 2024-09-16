@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use redb::{Database as RedbDatabase, ReadableTable, TableDefinition};
+use redb::{Database as RedbDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 
@@ -106,14 +106,11 @@ impl DatabaseInterface for Database {
         match &mut self.store {
             DB(db) => {
                 let tnx = db.begin_write().ok()?;
-                tnx.open_table(TABLE).ok()?.remove(key).ok()?;
+                tnx.open_table(TABLE).ok()?.remove(key).ok()??;
                 tnx.commit().ok()?;
                 Some(())
             }
-            Memory(mem) => {
-                mem.remove(key);
-                Some(())
-            }
+            Memory(mem) => mem.remove(key).map(|_| ()),
         }
     }
 
@@ -121,13 +118,19 @@ impl DatabaseInterface for Database {
         match &mut self.store {
             DB(db) => {
                 let tnx = db.begin_write().ok()?;
+                {
+                    if tnx.open_table(TABLE).ok()?.len().ok()? == 0 {
+                        return None;
+                    };
+                }
                 tnx.delete_table(TABLE).ok()?;
                 tnx.commit().ok()?;
                 Some(())
             }
             Memory(mem) => {
+                let res = if mem.is_empty() { None } else { Some(()) };
                 mem.clear();
-                Some(())
+                res
             }
         }
     }
