@@ -1,181 +1,165 @@
 #![allow(dead_code)]
 
-use redb::{Database as RedbDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
+mod memory_store;
+mod redb_store;
+
 use serde::{de::DeserializeOwned, Serialize};
-use std::collections::HashMap;
 
-pub trait DatabaseInterface {
-    // open & close
-    fn open(path: &str) -> Self;
-    fn memory() -> Self;
-    fn close(self);
-
-    // main methods
-    fn get<T: DeserializeOwned>(&self, key: &str) -> Option<T>;
-    fn insert<T: Serialize>(&mut self, key: &str, value: &T) -> Option<()>;
-    fn remove(&mut self, key: &str) -> Option<()>;
-    fn clear(&mut self) -> Option<()>;
-    fn keys(&self) -> Vec<String>;
-    fn values<T: DeserializeOwned>(&self) -> Vec<T>;
-    fn entries<T: DeserializeOwned>(&self) -> Vec<(String, T)>;
-    fn len(&self) -> usize;
-
-    // helpers
-    fn is_empty(&self) -> bool; // len() == 0
-    fn contains_key(&self, key: &str) -> bool; // keys().contains()
-
-    // aliases
-    fn set<T: Serialize>(&mut self, key: &str, value: &T) -> Option<()>; // insert
-    fn delete(&mut self, key: &str) -> Option<()>; // remove
-    fn reset(&mut self) -> Option<()>; // clear
-    fn remove_all(&mut self) -> Option<()>; // clear
-    fn contains(&self, key: &str) -> bool; // contains_key
-    fn has(&self, key: &str) -> bool; // contains_key
-    fn size(&self) -> usize; // len
+enum Store {
+    Redb(redb_store::Store),
+    Memory(memory_store::Store),
 }
 
-const TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("dbless");
+trait StoreInterface {
+    fn get<T: DeserializeOwned>(&self, table: &str, key: &str) -> Option<T>;
+    fn insert<T: Serialize>(&mut self, table: &str, key: &str, value: &T) -> Option<()>;
+    fn remove(&mut self, table: &str, key: &str) -> Option<()>;
+    fn clear(&mut self, table: &str) -> Option<()>;
+    fn keys(&self, table: &str) -> Vec<String>;
+    fn values<T: DeserializeOwned>(&self, table: &str) -> Vec<T>;
+    fn entries<T: DeserializeOwned>(&self, table: &str) -> Vec<(String, T)>;
+    fn len(&self, table: &str) -> usize;
+    fn contains_key(&self, table: &str, key: &str) -> bool;
+    fn is_empty(&self, table: &str) -> bool;
+}
+
+impl StoreInterface for Store {
+    fn get<T: DeserializeOwned>(&self, table: &str, key: &str) -> Option<T> {
+        match self {
+            Store::Redb(store) => store.get(table, key),
+            Store::Memory(store) => store.get(table, key),
+        }
+    }
+
+    fn insert<T: Serialize>(&mut self, table: &str, key: &str, value: &T) -> Option<()> {
+        match self {
+            Store::Redb(store) => store.insert(table, key, value),
+            Store::Memory(store) => store.insert(table, key, value),
+        }
+    }
+
+    fn remove(&mut self, table: &str, key: &str) -> Option<()> {
+        match self {
+            Store::Redb(store) => store.remove(table, key),
+            Store::Memory(store) => store.remove(table, key),
+        }
+    }
+
+    fn clear(&mut self, table: &str) -> Option<()> {
+        match self {
+            Store::Redb(store) => store.clear(table),
+            Store::Memory(store) => store.clear(table),
+        }
+    }
+
+    fn keys(&self, table: &str) -> Vec<String> {
+        match self {
+            Store::Redb(store) => store.keys(table),
+            Store::Memory(store) => store.keys(table),
+        }
+    }
+
+    fn values<T: DeserializeOwned>(&self, table: &str) -> Vec<T> {
+        match self {
+            Store::Redb(store) => store.values(table),
+            Store::Memory(store) => store.values(table),
+        }
+    }
+
+    fn entries<T: DeserializeOwned>(&self, table: &str) -> Vec<(String, T)> {
+        match self {
+            Store::Redb(store) => store.entries(table),
+            Store::Memory(store) => store.entries(table),
+        }
+    }
+
+    fn len(&self, table: &str) -> usize {
+        match self {
+            Store::Redb(store) => store.len(table),
+            Store::Memory(store) => store.len(table),
+        }
+    }
+
+    fn contains_key(&self, table: &str, key: &str) -> bool {
+        match self {
+            Store::Redb(store) => store.contains_key(table, key),
+            Store::Memory(store) => store.contains_key(table, key),
+        }
+    }
+
+    fn is_empty(&self, table: &str) -> bool {
+        match self {
+            Store::Redb(store) => store.is_empty(table),
+            Store::Memory(store) => store.is_empty(table),
+        }
+    }
+}
 
 pub struct Database {
     store: Store,
 }
 
-use Store::*;
-enum Store {
-    DB(RedbDatabase),
-    Memory(HashMap<String, Vec<u8>>),
-}
-
-impl DatabaseInterface for Database {
+impl Database {
     fn open(path: &str) -> Self {
         Database {
-            store: DB(RedbDatabase::create(path).unwrap()),
+            store: Store::Redb(redb_store::Store::new(path)),
         }
     }
+}
 
+impl Database {
     fn memory() -> Self {
         Database {
-            store: Memory(HashMap::new()),
+            store: Store::Memory(memory_store::Store::new()),
         }
     }
+}
 
+const MAIN_TABLE: &str = "dbless";
+
+impl Database {
     fn close(self) {
         drop(self);
     }
 
     fn get<T: DeserializeOwned>(&self, key: &str) -> Option<T> {
-        match &self.store {
-            DB(db) => {
-                let bytes = db
-                    .begin_read()
-                    .ok()?
-                    .open_table(TABLE)
-                    .ok()?
-                    .get(key)
-                    .ok()??;
-                rmp_serde::from_slice(bytes.value()).ok()
-            }
-            Memory(mem) => {
-                let bytes = mem.get(key)?;
-                rmp_serde::from_slice(bytes).ok()
-            }
-        }
+        self.store.get(MAIN_TABLE, key)
     }
 
     fn insert<T: Serialize>(&mut self, key: &str, value: &T) -> Option<()> {
-        match &mut self.store {
-            DB(db) => {
-                let bytes = rmp_serde::to_vec(value).unwrap();
-                let tnx = db.begin_write().ok()?;
-                tnx.open_table(TABLE)
-                    .ok()?
-                    .insert(key, bytes.as_slice())
-                    .ok()?;
-                tnx.commit().ok()?;
-                Some(())
-            }
-            Memory(mem) => {
-                let bytes = rmp_serde::to_vec(value).unwrap();
-                mem.insert(key.to_string(), bytes);
-                Some(())
-            }
-        }
+        self.store.insert(MAIN_TABLE, key, value)
     }
 
     fn remove(&mut self, key: &str) -> Option<()> {
-        match &mut self.store {
-            DB(db) => {
-                let tnx = db.begin_write().ok()?;
-                tnx.open_table(TABLE).ok()?.remove(key).ok()??;
-                tnx.commit().ok()?;
-                Some(())
-            }
-            Memory(mem) => mem.remove(key).map(|_| ()),
-        }
+        self.store.remove(MAIN_TABLE, key)
     }
 
     fn clear(&mut self) -> Option<()> {
-        match &mut self.store {
-            DB(db) => {
-                let tnx = db.begin_write().ok()?;
-                {
-                    if tnx.open_table(TABLE).ok()?.len().ok()? == 0 {
-                        return None;
-                    };
-                }
-                tnx.delete_table(TABLE).ok()?;
-                tnx.commit().ok()?;
-                Some(())
-            }
-            Memory(mem) => {
-                let res = if mem.is_empty() { None } else { Some(()) };
-                mem.clear();
-                res
-            }
-        }
+        self.store.clear(MAIN_TABLE)
     }
 
     fn keys(&self) -> Vec<String> {
-        (|| match &self.store {
-            DB(db) => {
-                let tnx = db.begin_read().ok()?;
-                let table = tnx.open_table(TABLE).ok()?;
-                let keys = table
-                    .iter()
-                    .ok()?
-                    .flatten()
-                    .map(|(k, _)| k.value().to_string())
-                    .collect();
-                Some(keys)
-            }
-            Memory(mem) => Some(mem.keys().cloned().collect()),
-        })()
-        .unwrap_or_default()
+        self.store.keys(MAIN_TABLE)
     }
 
     fn values<T: DeserializeOwned>(&self) -> Vec<T> {
-        self.keys().iter().filter_map(|k| self.get(k)).collect()
+        self.store.values(MAIN_TABLE)
     }
 
     fn entries<T: DeserializeOwned>(&self) -> Vec<(String, T)> {
-        self.keys()
-            .iter()
-            .map(|k| (k, self.get(k)))
-            .filter(|e| e.1.is_some())
-            .map(|e| (e.0.to_owned(), e.1.unwrap()))
-            .collect()
+        self.store.entries(MAIN_TABLE)
     }
 
     fn len(&self) -> usize {
-        self.keys().len()
+        self.store.len(MAIN_TABLE)
     }
 
     fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.store.is_empty(MAIN_TABLE)
     }
 
     fn contains_key(&self, key: &str) -> bool {
-        self.keys().iter().any(|e| e == key)
+        self.store.contains_key(MAIN_TABLE, key)
     }
 
     fn set<T: Serialize>(&mut self, key: &str, value: &T) -> Option<()> {
