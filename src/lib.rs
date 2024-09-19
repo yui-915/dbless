@@ -9,7 +9,7 @@ pub use table::{Table, TableMut, TableReadInterface, TableWriteInterface};
 use anyhow::Result;
 use serde::{de::DeserializeOwned, Serialize};
 
-const MAIN_TABLE: &str = "dbless";
+const MAIN_TABLE: &str = "#_#_main_dbless_table_#_#";
 
 pub struct Database {
     store: Store,
