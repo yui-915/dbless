@@ -16,10 +16,10 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn open(path: &str) -> Self {
-        Database {
-            store: Store::Redb(store::redb::Store::new(path)),
-        }
+    pub fn open(path: &str) -> Result<Self> {
+        Ok(Database {
+            store: Store::Redb(store::redb::Store::new(path)?),
+        })
     }
 
     pub fn memory() -> Self {

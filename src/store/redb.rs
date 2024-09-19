@@ -7,8 +7,8 @@ use serde::{de::DeserializeOwned, Serialize};
 pub struct Store(Database);
 
 impl Store {
-    pub(crate) fn new(path: &str) -> Self {
-        Store(Database::create(path).unwrap())
+    pub(crate) fn new(path: &str) -> Result<Self> {
+        Ok(Store(Database::create(path)?))
     }
 }
 
@@ -38,7 +38,7 @@ impl StoreInterface for Store {
 
     fn insert<T: Serialize>(&mut self, table: &str, key: &str, value: &T) -> Result<()> {
         let table = TableDefinition::<&str, &[u8]>::new(table);
-        let bytes = rmp_serde::to_vec(value).unwrap();
+        let bytes = rmp_serde::to_vec(value)?;
         let db = &self.0;
         let tnx = db.begin_write()?;
         {
