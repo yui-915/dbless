@@ -112,4 +112,8 @@ impl StoreInterface for Store {
         };
         Ok(table.is_empty())
     }
+
+    fn list_tables(&self) -> Result<Vec<String>> {
+        Ok(self.0.keys().cloned().collect())
+    }
 }

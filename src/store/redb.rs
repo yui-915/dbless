@@ -1,6 +1,6 @@
 use crate::StoreInterface;
 use anyhow::Result;
-use redb::{Database, TableError};
+use redb::{Database, TableError, TableHandle};
 use redb::{ReadableTable, ReadableTableMetadata, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -128,5 +128,12 @@ impl StoreInterface for Store {
 
     fn is_empty(&self, table: &str) -> Result<bool> {
         Ok(self.len(table)? == 0)
+    }
+
+    fn list_tables(&self) -> Result<Vec<String>> {
+        let db = &self.0;
+        let tnx = db.begin_read()?;
+        let tables = tnx.list_tables()?;
+        Ok(tables.map(|t| t.name().to_string()).collect())
     }
 }

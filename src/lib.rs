@@ -45,6 +45,15 @@ impl Database {
             name,
         }
     }
+
+    pub fn list_tables(&self) -> Result<Vec<String>> {
+        Ok(self
+            .store
+            .list_tables()?
+            .into_iter()
+            .filter(|t| t != MAIN_TABLE)
+            .collect())
+    }
 }
 
 impl TableReadInterface for Database {
