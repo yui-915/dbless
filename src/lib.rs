@@ -4,7 +4,7 @@ mod store;
 use store::{Store, StoreInterface};
 
 mod table;
-use table::TableInterface;
+pub use table::{Table, TableMut, TableReadInterface, TableWriteInterface};
 
 use anyhow::Result;
 use serde::{de::DeserializeOwned, Serialize};
@@ -16,62 +16,90 @@ pub struct Database {
 }
 
 impl Database {
-    fn open(path: &str) -> Self {
+    pub fn open(path: &str) -> Self {
         Database {
             store: Store::Redb(store::redb::Store::new(path)),
         }
     }
 
-    fn memory() -> Self {
+    pub fn memory() -> Self {
         Database {
             store: Store::Memory(store::memory::Store::new()),
         }
     }
 
-    fn close(self) {
+    pub fn close(self) {
         drop(self);
+    }
+
+    pub fn table<'a>(&'a self, name: &'a str) -> Table<'a> {
+        Table {
+            store: &self.store,
+            name,
+        }
+    }
+
+    pub fn table_mut<'a>(&'a mut self, name: &'a str) -> TableMut<'a> {
+        TableMut {
+            store: &mut self.store,
+            name,
+        }
     }
 }
 
-impl TableInterface for Database {
+impl TableReadInterface for Database {
     fn get<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>> {
-        self.store.get(MAIN_TABLE, key)
-    }
-
-    fn insert<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()> {
-        self.store.insert(MAIN_TABLE, key, value)
-    }
-
-    fn remove(&mut self, key: &str) -> Result<()> {
-        self.store.remove(MAIN_TABLE, key)
-    }
-
-    fn clear(&mut self) -> Result<()> {
-        self.store.clear(MAIN_TABLE)
+        self.table(MAIN_TABLE).get(key)
     }
 
     fn keys(&self) -> Result<Vec<String>> {
-        self.store.keys(MAIN_TABLE)
+        self.table(MAIN_TABLE).keys()
     }
 
     fn values<T: DeserializeOwned>(&self) -> Result<Vec<T>> {
-        self.store.values(MAIN_TABLE)
+        self.table(MAIN_TABLE).values()
     }
 
     fn entries<T: DeserializeOwned>(&self) -> Result<Vec<(String, T)>> {
-        self.store.entries(MAIN_TABLE)
+        self.table(MAIN_TABLE).entries()
     }
 
     fn len(&self) -> Result<usize> {
-        self.store.len(MAIN_TABLE)
+        self.table(MAIN_TABLE).len()
     }
 
     fn is_empty(&self) -> Result<bool> {
-        self.store.is_empty(MAIN_TABLE)
+        self.table(MAIN_TABLE).is_empty()
     }
 
     fn contains_key(&self, key: &str) -> Result<bool> {
-        self.store.contains_key(MAIN_TABLE, key)
+        self.table(MAIN_TABLE).contains_key(key)
+    }
+
+    fn size(&self) -> Result<usize> {
+        self.table(MAIN_TABLE).size()
+    }
+
+    fn contains(&self, key: &str) -> Result<bool> {
+        self.table(MAIN_TABLE).contains(key)
+    }
+
+    fn has(&self, key: &str) -> Result<bool> {
+        self.table(MAIN_TABLE).has(key)
+    }
+}
+
+impl TableWriteInterface for Database {
+    fn insert<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()> {
+        self.table_mut(MAIN_TABLE).insert(key, value)
+    }
+
+    fn remove(&mut self, key: &str) -> Result<()> {
+        self.table_mut(MAIN_TABLE).remove(key)
+    }
+
+    fn clear(&mut self) -> Result<()> {
+        self.table_mut(MAIN_TABLE).clear()
     }
 
     fn set<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()> {
@@ -89,20 +117,9 @@ impl TableInterface for Database {
     fn remove_all(&mut self) -> Result<()> {
         self.clear()
     }
-
-    fn size(&self) -> Result<usize> {
-        self.len()
-    }
-
-    fn contains(&self, key: &str) -> Result<bool> {
-        self.contains_key(key)
-    }
-
-    fn has(&self, key: &str) -> Result<bool> {
-        self.contains_key(key)
-    }
 }
 
+// TODO: rewrite and move to a separate file
 #[cfg(test)]
 mod tests {
     use super::*;
