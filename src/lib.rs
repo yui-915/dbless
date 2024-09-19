@@ -122,10 +122,6 @@ impl TableWriteInterface for Database {
     fn reset(&mut self) -> Result<()> {
         self.clear()
     }
-
-    fn remove_all(&mut self) -> Result<()> {
-        self.clear()
-    }
 }
 
 // TODO: rewrite and move to a separate file

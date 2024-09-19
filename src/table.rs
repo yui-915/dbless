@@ -25,7 +25,6 @@ pub trait TableWriteInterface {
     fn set<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()>;
     fn delete(&mut self, key: &str) -> Result<()>;
     fn reset(&mut self) -> Result<()>;
-    fn remove_all(&mut self) -> Result<()>;
 }
 
 pub struct Table<'a> {
@@ -144,10 +143,6 @@ impl<'a> TableWriteInterface for TableMut<'a> {
     }
 
     fn reset(&mut self) -> Result<()> {
-        self.clear()
-    }
-
-    fn remove_all(&mut self) -> Result<()> {
         self.clear()
     }
 }
