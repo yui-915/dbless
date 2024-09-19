@@ -144,10 +144,10 @@ mod tests {
     fn test_redb() -> Result<()> {
         let _ = std::fs::remove_file("test.db");
 
-        let db = Database::open("test.db");
+        let db = Database::open("test.db")?;
         test_database(db)?;
 
-        let db2 = Database::open("test.db");
+        let db2 = Database::open("test.db")?;
         test_existing_database(db2)?;
 
         std::fs::remove_file("test.db").unwrap();
