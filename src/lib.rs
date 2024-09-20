@@ -69,7 +69,6 @@ impl Database {
     }
 
     /// Returns a list of the names of all tables in the database.
-    #[doc(hidden)] // needs more testing and consideration, especially with empty tables
     pub fn list_tables(&self) -> Result<Vec<String>> {
         Ok(self
             .store
@@ -77,6 +76,11 @@ impl Database {
             .into_iter()
             .filter(|t| t != MAIN_TABLE)
             .collect())
+    }
+
+    /// Deletes a table from the database.
+    pub fn delete_table(&mut self, name: &str) -> Result<()> {
+        self.store.delete_table(name)
     }
 
     /// Returns the number of entries in all tables in the database. \

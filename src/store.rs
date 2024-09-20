@@ -169,4 +169,12 @@ impl Store {
         tnx.commit()?;
         Ok(())
     }
+
+    pub fn delete_table(&mut self, name: &str) -> Result<()> {
+        let db = &self.0;
+        let tnx = db.begin_write()?;
+        tnx.delete_table(TableDefinition::<&str, &[u8]>::new(name))?;
+        tnx.commit()?;
+        Ok(())
+    }
 }
