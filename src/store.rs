@@ -1,119 +1,162 @@
-pub mod memory;
-pub mod redb;
-
+use crate::serde::{deserialize, serialize, DeserializeOwned, Serialize};
 use anyhow::Result;
-use serde::{de::DeserializeOwned, Serialize};
+use redb::{backends::InMemoryBackend, Builder, Database, TableError, TableHandle};
+use redb::{ReadableTable, ReadableTableMetadata, TableDefinition};
 
-pub enum Store {
-    Redb(redb::Store),
-    Memory(memory::Store),
+pub struct Store(Database);
+
+macro_rules! open_table_read_or {
+    ($tnx:expr, $table:expr, $or:expr) => {
+        match $tnx.open_table(TableDefinition::<&str, &[u8]>::new($table)) {
+            Ok(table) => table,
+            Err(e) => match e {
+                TableError::TableDoesNotExist(_) => return Ok($or),
+                _ => return Err(e.into()),
+            },
+        }
+    };
 }
 
-pub trait StoreInterface {
-    fn get<T: DeserializeOwned>(&self, table: &str, key: &str) -> Result<Option<T>>;
-    fn insert<T: Serialize>(&mut self, table: &str, key: &str, value: &T) -> Result<()>;
-    fn remove(&mut self, table: &str, key: &str) -> Result<()>;
-    fn clear(&mut self, table: &str) -> Result<()>;
-    fn keys(&self, table: &str) -> Result<Vec<String>>;
-    fn values<T: DeserializeOwned>(&self, table: &str) -> Result<Vec<T>>;
-    fn entries<T: DeserializeOwned>(&self, table: &str) -> Result<Vec<(String, T)>>;
-    fn len(&self, table: &str) -> Result<usize>;
-    fn contains_key(&self, table: &str, key: &str) -> Result<bool>;
-    fn is_empty(&self, table: &str) -> Result<bool>;
-    fn list_tables(&self) -> Result<Vec<String>>;
-    fn len_all_tables(&self) -> Result<usize>;
-    fn clear_all_tables(&mut self) -> Result<()>;
-}
-
-impl StoreInterface for Store {
-    fn get<T: DeserializeOwned>(&self, table: &str, key: &str) -> Result<Option<T>> {
-        match self {
-            Store::Redb(store) => store.get(table, key),
-            Store::Memory(store) => store.get(table, key),
-        }
+impl Store {
+    pub fn file(path: &str) -> Result<Self> {
+        let db = Database::create(path)?;
+        Ok(Store(db))
     }
 
-    fn insert<T: Serialize>(&mut self, table: &str, key: &str, value: &T) -> Result<()> {
-        match self {
-            Store::Redb(store) => store.insert(table, key, value),
-            Store::Memory(store) => store.insert(table, key, value),
-        }
+    pub fn in_memory() -> Result<Self> {
+        let backend = InMemoryBackend::new();
+        let db = Builder::new().create_with_backend(backend)?;
+        Ok(Store(db))
     }
 
-    fn remove(&mut self, table: &str, key: &str) -> Result<()> {
-        match self {
-            Store::Redb(store) => store.remove(table, key),
-            Store::Memory(store) => store.remove(table, key),
-        }
+    pub fn get<T: DeserializeOwned>(&self, table: &str, key: &str) -> Result<Option<T>> {
+        let db = &self.0;
+        let tnx = db.begin_read()?;
+        let table = open_table_read_or!(tnx, table, None);
+        let bytes = match table.get(key)? {
+            Some(bytes) => bytes,
+            None => return Ok(None),
+        };
+        deserialize(bytes.value())
     }
 
-    fn clear(&mut self, table: &str) -> Result<()> {
-        match self {
-            Store::Redb(store) => store.clear(table),
-            Store::Memory(store) => store.clear(table),
+    pub fn insert<T: Serialize>(&mut self, table: &str, key: &str, value: &T) -> Result<()> {
+        let table = TableDefinition::<&str, &[u8]>::new(table);
+        let bytes = serialize(value)?;
+        let db = &self.0;
+        let tnx = db.begin_write()?;
+        {
+            let mut table = tnx.open_table(table)?;
+            table.insert(key, bytes.as_slice())?;
         }
+        tnx.commit()?;
+        Ok(())
     }
 
-    fn keys(&self, table: &str) -> Result<Vec<String>> {
-        match self {
-            Store::Redb(store) => store.keys(table),
-            Store::Memory(store) => store.keys(table),
+    pub fn remove(&mut self, table: &str, key: &str) -> Result<()> {
+        let table = TableDefinition::<&str, &[u8]>::new(table);
+        let db = &self.0;
+        let tnx = db.begin_write()?;
+        {
+            let mut table = tnx.open_table(table)?;
+            table.remove(key)?;
         }
+        tnx.commit()?;
+        Ok(())
     }
 
-    fn values<T: DeserializeOwned>(&self, table: &str) -> Result<Vec<T>> {
-        match self {
-            Store::Redb(store) => store.values(table),
-            Store::Memory(store) => store.values(table),
-        }
+    pub fn clear(&mut self, table: &str) -> Result<()> {
+        let table = TableDefinition::<&str, &[u8]>::new(table);
+        let db = &self.0;
+        let tnx = db.begin_write()?;
+        tnx.delete_table(table)?;
+        tnx.commit()?;
+        Ok(())
     }
 
-    fn entries<T: DeserializeOwned>(&self, table: &str) -> Result<Vec<(String, T)>> {
-        match self {
-            Store::Redb(store) => store.entries(table),
-            Store::Memory(store) => store.entries(table),
-        }
+    pub fn keys(&self, table: &str) -> Result<Vec<String>> {
+        let db = &self.0;
+        let tnx = db.begin_read()?;
+        let table = open_table_read_or!(tnx, table, vec![]);
+        let entries = table.iter()?;
+        let keys = entries
+            .flatten()
+            .map(|(k, _)| k.value().to_string())
+            .collect();
+        Ok(keys)
     }
 
-    fn len(&self, table: &str) -> Result<usize> {
-        match self {
-            Store::Redb(store) => store.len(table),
-            Store::Memory(store) => store.len(table),
-        }
+    pub fn values<T: DeserializeOwned>(&self, table: &str) -> Result<Vec<T>> {
+        let db = &self.0;
+        let tnx = db.begin_read()?;
+        let table = open_table_read_or!(tnx, table, vec![]);
+        let entries = table.iter()?;
+        let values = entries
+            .flatten()
+            .flat_map(|(_, v)| deserialize(v.value()).ok())
+            .collect();
+        Ok(values)
     }
 
-    fn contains_key(&self, table: &str, key: &str) -> Result<bool> {
-        match self {
-            Store::Redb(store) => store.contains_key(table, key),
-            Store::Memory(store) => store.contains_key(table, key),
-        }
+    pub fn entries<T: DeserializeOwned>(&self, table: &str) -> Result<Vec<(String, T)>> {
+        let db = &self.0;
+        let tnx = db.begin_read()?;
+        let table = open_table_read_or!(tnx, table, vec![]);
+        let entries = table.iter()?;
+        let entries = entries
+            .flatten()
+            .flat_map(|(k, v)| Some((k.value().to_string(), deserialize(v.value()).ok()?)))
+            .collect();
+        Ok(entries)
     }
 
-    fn is_empty(&self, table: &str) -> Result<bool> {
-        match self {
-            Store::Redb(store) => store.is_empty(table),
-            Store::Memory(store) => store.is_empty(table),
-        }
+    pub fn len(&self, table: &str) -> Result<usize> {
+        let db = &self.0;
+        let tnx = db.begin_read()?;
+        let table = open_table_read_or!(tnx, table, 0);
+        let len = table.len()?;
+        Ok(len as usize)
     }
 
-    fn list_tables(&self) -> Result<Vec<String>> {
-        match self {
-            Store::Redb(store) => store.list_tables(),
-            Store::Memory(store) => store.list_tables(),
-        }
+    pub fn contains_key(&self, table: &str, key: &str) -> Result<bool> {
+        let db = &self.0;
+        let tnx = db.begin_read()?;
+        let table = open_table_read_or!(tnx, table, false);
+        Ok(table.get(key)?.is_some())
     }
 
-    fn len_all_tables(&self) -> Result<usize> {
-        match self {
-            Store::Redb(store) => store.len_all_tables(),
-            Store::Memory(store) => store.len_all_tables(),
-        }
+    pub fn is_empty(&self, table: &str) -> Result<bool> {
+        Ok(self.len(table)? == 0)
     }
 
-    fn clear_all_tables(&mut self) -> Result<()> {
-        match self {
-            Store::Redb(store) => store.clear_all_tables(),
-            Store::Memory(store) => store.clear_all_tables(),
+    pub fn list_tables(&self) -> Result<Vec<String>> {
+        let db = &self.0;
+        let tnx = db.begin_read()?;
+        let tables = tnx.list_tables()?;
+        Ok(tables.map(|t| t.name().to_string()).collect())
+    }
+
+    pub fn len_all_tables(&self) -> Result<usize> {
+        let db = &self.0;
+        let tnx = db.begin_read()?;
+        let tables = tnx.list_tables()?;
+        let mut len = 0;
+        for t in tables {
+            let table_definition = TableDefinition::<&str, &[u8]>::new(t.name());
+            let table = tnx.open_table(table_definition)?;
+            len += table.len()?;
         }
+        Ok(len as usize)
+    }
+
+    pub fn clear_all_tables(&mut self) -> Result<()> {
+        let db = &self.0;
+        let tnx = db.begin_write()?;
+        let tables = tnx.list_tables()?;
+        for table in tables {
+            tnx.delete_table(table)?;
+        }
+        tnx.commit()?;
+        Ok(())
     }
 }

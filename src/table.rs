@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::store::{Store, StoreInterface};
+use crate::store::Store;
 
 /// A trait for reading from a table
 pub trait TableReadInterface {

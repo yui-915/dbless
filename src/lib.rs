@@ -54,7 +54,7 @@
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // in-memory database instead of a file
-//!     let mut db = Database::memory();
+//!     let mut db = Database::memory()?;
 //!
 //!     db.set("user1", &User {
 //!         username: "admin-1".to_string(),
@@ -82,7 +82,7 @@
 //! use dbless::{Database, TableReadInterface, TableWriteInterface};
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     let mut db = Database::memory();
+//!     let mut db = Database::memory()?;
 //!
 //!     db.set("msg", &"Hello from main table")?;
 //!     db.table_mut("table1").set("msg", &"Hello from table 1")?;
@@ -116,7 +116,7 @@
 //!
 
 mod store;
-use store::{Store, StoreInterface};
+use store::Store;
 
 mod table;
 
@@ -142,16 +142,16 @@ impl Database {
     /// If the file doesn't exist, it will be created.
     pub fn open(path: &str) -> Result<Self> {
         Ok(Database {
-            store: Store::Redb(store::redb::Store::new(path)?),
+            store: Store::file(path)?,
         })
     }
 
     /// Opens an in-memory database.
     /// Useful for tests and as a stub for a database that doesn't need to be saved to disk.
-    pub fn memory() -> Self {
-        Database {
-            store: Store::Memory(store::memory::Store::new()),
-        }
+    pub fn memory() -> Result<Self> {
+        Ok(Database {
+            store: Store::in_memory()?,
+        })
     }
 
     /// Closes the databas
