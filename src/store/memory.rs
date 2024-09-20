@@ -116,4 +116,13 @@ impl StoreInterface for Store {
     fn list_tables(&self) -> Result<Vec<String>> {
         Ok(self.0.keys().cloned().collect())
     }
+
+    fn len_all_tables(&self) -> Result<usize> {
+        Ok(self.0.values().map(|v| v.len()).sum())
+    }
+
+    fn clear_all_tables(&mut self) -> Result<()> {
+        self.0.clear();
+        Ok(())
+    }
 }

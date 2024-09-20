@@ -136,4 +136,28 @@ impl StoreInterface for Store {
         let tables = tnx.list_tables()?;
         Ok(tables.map(|t| t.name().to_string()).collect())
     }
+
+    fn len_all_tables(&self) -> Result<usize> {
+        let db = &self.0;
+        let tnx = db.begin_read()?;
+        let tables = tnx.list_tables()?;
+        let mut len = 0;
+        for t in tables {
+            let table_definition = TableDefinition::<&str, &[u8]>::new(t.name());
+            let table = tnx.open_table(table_definition)?;
+            len += table.len()?;
+        }
+        Ok(len as usize)
+    }
+
+    fn clear_all_tables(&mut self) -> Result<()> {
+        let db = &self.0;
+        let tnx = db.begin_write()?;
+        let tables = tnx.list_tables()?;
+        for table in tables {
+            tnx.delete_table(table)?;
+        }
+        tnx.commit()?;
+        Ok(())
+    }
 }

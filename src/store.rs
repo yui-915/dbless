@@ -21,6 +21,8 @@ pub trait StoreInterface {
     fn contains_key(&self, table: &str, key: &str) -> Result<bool>;
     fn is_empty(&self, table: &str) -> Result<bool>;
     fn list_tables(&self) -> Result<Vec<String>>;
+    fn len_all_tables(&self) -> Result<usize>;
+    fn clear_all_tables(&mut self) -> Result<()>;
 }
 
 impl StoreInterface for Store {
@@ -98,6 +100,20 @@ impl StoreInterface for Store {
         match self {
             Store::Redb(store) => store.list_tables(),
             Store::Memory(store) => store.list_tables(),
+        }
+    }
+
+    fn len_all_tables(&self) -> Result<usize> {
+        match self {
+            Store::Redb(store) => store.len_all_tables(),
+            Store::Memory(store) => store.len_all_tables(),
+        }
+    }
+
+    fn clear_all_tables(&mut self) -> Result<()> {
+        match self {
+            Store::Redb(store) => store.clear_all_tables(),
+            Store::Memory(store) => store.clear_all_tables(),
         }
     }
 }

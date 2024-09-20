@@ -54,6 +54,22 @@ impl Database {
             .filter(|t| t != MAIN_TABLE)
             .collect())
     }
+
+    pub fn len_all_tables(&self) -> Result<usize> {
+        self.store.len_all_tables()
+    }
+
+    pub fn size_all_tables(&self) -> Result<usize> {
+        self.len_all_tables()
+    }
+
+    pub fn clear_all_tables(&mut self) -> Result<()> {
+        self.store.clear_all_tables()
+    }
+
+    pub fn reset_all_tables(&mut self) -> Result<()> {
+        self.clear_all_tables()
+    }
 }
 
 impl TableReadInterface for Database {
