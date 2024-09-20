@@ -5,7 +5,7 @@
 //! uses a default table named `#_#_main_dbless_table_#_#`.
 //!
 //! calling [`clear()`](struct.Database.html#method.clear) or [`reset()`](struct.Database.html#method.reset) will only clear this table, not the entire database, \
-//! to clear the entire database, use [`clear_all_tables()`](struct.Database.html#method.clear_all_tables) or [`reset_all_tables()`](struct.Database.html#method.reset_all_tables).
+//! to clear the entire database, use [`delete_all_tables()`](struct.Database.html#method.delete_all_tables)
 //!
 //! similarly, calling [`len()`](struct.Database.html#method.len) or [`size()`](struct.Database.html#method.size) will only count the number of entries in this table, \
 //! to count the number of entries in the entire database, use [`len_all_tables()`](struct.Database.html#method.len_all_tables) or [`size_all_tables()`](struct.Database.html#method.size_all_tables).
@@ -91,16 +91,10 @@ impl Database {
         self.len_all_tables()
     }
 
-    /// Clears all tables in the database. \
+    /// Deletes all tables in the database. \
     /// aliases: [`reset_all_tables()`](#method.reset_all_tables)
-    pub fn clear_all_tables(&mut self) -> Result<()> {
-        self.store.clear_all_tables()
-    }
-
-    /// Clears all tables in the database. \
-    /// aliases: [`clear_all_tables()`](#method.clear_all_tables)
-    pub fn reset_all_tables(&mut self) -> Result<()> {
-        self.clear_all_tables()
+    pub fn delete_all_tables(&mut self) -> Result<()> {
+        self.store.delete_all_tables()
     }
 }
 

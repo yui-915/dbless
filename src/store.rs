@@ -159,7 +159,7 @@ impl Store {
         Ok(len as usize)
     }
 
-    pub fn clear_all_tables(&mut self) -> Result<()> {
+    pub fn delete_all_tables(&mut self) -> Result<()> {
         let db = &self.0;
         let tnx = db.begin_write()?;
         let tables = tnx.list_tables()?;

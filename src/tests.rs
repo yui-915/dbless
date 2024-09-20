@@ -22,7 +22,7 @@ macro_rules! test_db_and_tables {
     (|$db:ident| $block:block) => {{
         #[allow(unused_mut)]
         let mut $db = unsafe { DB.as_mut().unwrap() };
-        $db.clear_all_tables()?;
+        $db.delete_all_tables()?;
         $block
 
         let t1l;
@@ -47,7 +47,7 @@ macro_rules! test_db_and_tables {
 
         #[allow(unused_mut)]
         let mut $db = unsafe { MEM.as_mut().unwrap() };
-        $db.clear_all_tables()?;
+        $db.delete_all_tables()?;
         $block
 
         let t1l;
