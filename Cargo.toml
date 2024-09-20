@@ -1,9 +1,12 @@
 [package]
 name = "dbless"
-version = "0.0.2"
+version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "simple key-value store"
+description = "A simple key-value store for rust apps that don't need a full-flagged database."
+authors = ["yui-915"]
+repository = "https://github.com/yui-915/dbless"
+keywords = ["database", "key-value", "kv", "store", "key-value-store"]
 
 [dependencies]
 anyhow = "1.0.89"
