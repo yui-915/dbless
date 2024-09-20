@@ -1,9 +1,11 @@
-#![allow(dead_code)]
-
 mod store;
 use store::{Store, StoreInterface};
 
 mod table;
+
+#[cfg(test)]
+mod tests;
+
 pub use table::{Table, TableMut, TableReadInterface, TableWriteInterface};
 
 use anyhow::Result;
@@ -139,109 +141,5 @@ impl TableWriteInterface for Database {
 
     fn reset(&mut self) -> Result<()> {
         self.clear()
-    }
-}
-
-// TODO: rewrite and move to a separate file
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_memory() -> Result<()> {
-        let db = Database::memory();
-        test_database(db)?;
-        Ok(())
-    }
-
-    #[test]
-    fn test_redb() -> Result<()> {
-        let _ = std::fs::remove_file("test.db");
-
-        let db = Database::open("test.db")?;
-        test_database(db)?;
-
-        let db2 = Database::open("test.db")?;
-        test_existing_database(db2)?;
-
-        std::fs::remove_file("test.db").unwrap();
-        Ok(())
-    }
-
-    fn test_database(mut db: Database) -> Result<()> {
-        // empty database
-        assert_eq!(db.get::<u32>("test")?, None);
-        assert!(db.is_empty()?);
-        assert_eq!(db.len()?, 0);
-        assert_eq!(db.keys()?.len(), 0);
-        assert_eq!(db.values::<u32>()?, vec![]);
-        assert_eq!(db.entries::<String>()?, vec![]);
-        assert!(!db.contains_key("test")?);
-
-        // set and get
-        db.set("test", &69_u32)?;
-        assert_eq!(db.get::<u32>("test")?, Some(69_u32));
-        assert!(!db.is_empty()?);
-        assert_eq!(db.len()?, 1);
-        assert_eq!(db.size()?, 1);
-        assert_eq!(db.keys()?, vec!["test"]);
-        assert_eq!(db.values::<u32>()?, vec![69_u32]);
-        assert_eq!(db.entries::<u32>()?, vec![("test".to_string(), 69_u32)]);
-        assert!(db.contains_key("test")?);
-        assert!(db.contains("test")?);
-        assert!(!db.contains("test2")?);
-        assert!(db.has("test")?);
-
-        db.set("test2", &"hello world")?;
-        assert_eq!(db.get::<String>("test2")?, Some("hello world".to_string()));
-        assert_eq!(db.get::<u32>("test")?, Some(69_u32));
-
-        // wrong type
-        assert!(db.get::<i32>("test2").is_err());
-
-        // keys, values, entries
-        let mut keys = db.keys()?;
-        let mut expected = ["test", "test2"];
-        keys.sort();
-        expected.sort();
-        assert_eq!(keys, expected);
-        assert_eq!(db.values::<u32>()?, vec![69_u32]);
-        assert_eq!(
-            db.entries::<String>()?,
-            vec![("test2".to_string(), "hello world".to_string())]
-        );
-
-        // remove
-        db.remove("test3")?;
-        db.remove("test2")?;
-        assert_eq!(db.get::<String>("test2")?, None);
-
-        // empty again
-        db.clear()?;
-        db.clear()?;
-        assert!(db.is_empty()?);
-        assert_eq!(db.len()?, 0);
-        assert_eq!(db.keys()?.len(), 0);
-        assert_eq!(db.values::<u32>()?, vec![]);
-        assert_eq!(db.entries::<String>()?, vec![]);
-        assert!(!db.contains_key("test")?);
-
-        // for later
-        db.set("test3", &"hello world")?;
-        db.set("test", &69_u32)?;
-
-        Ok(())
-    }
-
-    fn test_existing_database(db: Database) -> Result<()> {
-        assert_eq!(db.len()?, 2);
-        assert_eq!(db.keys()?, vec!["test", "test3"]);
-        assert_eq!(db.values::<u32>()?, vec![69_u32]);
-        assert_eq!(db.entries::<u32>()?, vec![("test".to_string(), 69_u32)]);
-        assert_eq!(db.get::<String>("test3")?, Some("hello world".to_string()));
-        assert_eq!(db.get::<u32>("test")?, Some(69_u32));
-        assert!(!db.is_empty()?);
-
-        Ok(())
     }
 }
