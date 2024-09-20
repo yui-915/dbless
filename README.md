@@ -55,8 +55,8 @@ enum Role {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // in-memory database instead of a file
-    let mut db = Database::memory()?;
+    // temporary, in-memory database instead of a file
+    let mut db = Database::in_memory()?;
 
     db.set("user1", &User {
         username: "admin-1".to_string(),
@@ -86,7 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 use dbless::{Database, TableReadInterface, TableWriteInterface};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut db = Database::memory()?;
+    let mut db = Database::in_memory()?;
 
     db.set("msg", &"Hello from main table")?;
     db.table_mut("table1").set("msg", &"Hello from table 1")?;

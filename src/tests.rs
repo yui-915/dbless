@@ -14,7 +14,7 @@ fn init_tests() {
     delete_test_db();
     unsafe {
         DB = Some(Database::open(TEST_DB_NAME).unwrap());
-        MEM = Some(Database::memory().unwrap());
+        MEM = Some(Database::in_memory().unwrap());
     }
 }
 

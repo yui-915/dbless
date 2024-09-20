@@ -41,7 +41,7 @@ impl Database {
 
     /// Opens an in-memory database.
     /// Useful for tests and as a stub for a database that doesn't need to be saved to disk.
-    pub fn memory() -> Result<Self> {
+    pub fn in_memory() -> Result<Self> {
         Ok(Database {
             store: Store::in_memory()?,
         })
