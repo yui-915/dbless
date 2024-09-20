@@ -1,6 +1,6 @@
+use crate::serde::{deserialize, serialize, DeserializeOwned, Serialize};
 use crate::StoreInterface;
 use anyhow::Result;
-use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 
 type Table = HashMap<String, Vec<u8>>;
@@ -32,12 +32,12 @@ impl StoreInterface for Store {
             Some(bytes) => bytes,
             None => return Ok(None),
         };
-        Ok(rmp_serde::from_slice(bytes).map(Some)?)
+        deserialize(bytes).map(Some)
     }
 
     fn insert<T: Serialize>(&mut self, table: &str, key: &str, value: &T) -> Result<()> {
         let table = self.table_mut(table);
-        table.insert(key.to_string(), rmp_serde::to_vec(value)?);
+        table.insert(key.to_string(), serialize(value)?);
         Ok(())
     }
 
@@ -69,7 +69,7 @@ impl StoreInterface for Store {
         };
         let values = table
             .values()
-            .filter_map(|bytes| rmp_serde::from_slice(bytes).ok())
+            .filter_map(|bytes| deserialize(bytes).ok())
             .collect();
         Ok(values)
     }
@@ -82,7 +82,7 @@ impl StoreInterface for Store {
         let entries = table
             .iter()
             .filter_map(|(key, bytes)| {
-                let value = rmp_serde::from_slice(bytes).ok()?;
+                let value = deserialize(bytes).ok()?;
                 Some((key.clone(), value))
             })
             .collect();

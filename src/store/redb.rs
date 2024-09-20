@@ -1,8 +1,8 @@
+use crate::serde::{deserialize, serialize, DeserializeOwned, Serialize};
 use crate::StoreInterface;
 use anyhow::Result;
 use redb::{Database, TableError, TableHandle};
 use redb::{ReadableTable, ReadableTableMetadata, TableDefinition};
-use serde::{de::DeserializeOwned, Serialize};
 
 pub struct Store(Database);
 
@@ -33,12 +33,12 @@ impl StoreInterface for Store {
             Some(bytes) => bytes,
             None => return Ok(None),
         };
-        Ok(rmp_serde::from_slice(bytes.value())?)
+        deserialize(bytes.value())
     }
 
     fn insert<T: Serialize>(&mut self, table: &str, key: &str, value: &T) -> Result<()> {
         let table = TableDefinition::<&str, &[u8]>::new(table);
-        let bytes = rmp_serde::to_vec(value)?;
+        let bytes = serialize(value)?;
         let db = &self.0;
         let tnx = db.begin_write()?;
         {
@@ -89,7 +89,7 @@ impl StoreInterface for Store {
         let entries = table.iter()?;
         let values = entries
             .flatten()
-            .flat_map(|(_, v)| rmp_serde::from_slice(v.value()).ok())
+            .flat_map(|(_, v)| deserialize(v.value()).ok())
             .collect();
         Ok(values)
     }
@@ -101,12 +101,7 @@ impl StoreInterface for Store {
         let entries = table.iter()?;
         let entries = entries
             .flatten()
-            .flat_map(|(k, v)| {
-                Some((
-                    k.value().to_string(),
-                    rmp_serde::from_slice(v.value()).ok()?,
-                ))
-            })
+            .flat_map(|(k, v)| Some((k.value().to_string(), deserialize(v.value()).ok()?)))
             .collect();
         Ok(entries)
     }

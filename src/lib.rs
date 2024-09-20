@@ -7,7 +7,9 @@ mod table;
 pub use table::{Table, TableMut, TableReadInterface, TableWriteInterface};
 
 use anyhow::Result;
-use serde::{de::DeserializeOwned, Serialize};
+
+mod serde;
+use serde::{DeserializeOwned, Serialize};
 
 const MAIN_TABLE: &str = "#_#_main_dbless_table_#_#";
 
