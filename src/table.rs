@@ -3,35 +3,78 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::store::{Store, StoreInterface};
 
+/// A trait for reading from a table
 pub trait TableReadInterface {
+    /// Gets the value associated with the given key.
     fn get<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>>;
+
+    /// Gets a list of all keys in the table.
     fn keys(&self) -> Result<Vec<String>>;
+
+    /// Gets a list of all values in the table (that can be deserialized into the given type).
     fn values<T: DeserializeOwned>(&self) -> Result<Vec<T>>;
+
+    /// Gets a list of all entries in the table (that can be deserialized into the given type).
     fn entries<T: DeserializeOwned>(&self) -> Result<Vec<(String, T)>>;
+
+    /// Gets the number of entries in the table. \
+    /// aliases: [`size()`](#method.size)
     fn len(&self) -> Result<usize>;
+
+    /// Checks if the table contains the given key. \
+    /// aliases: [`contains()`](#method.contains), [`has()`](#method.has)
     fn contains_key(&self, key: &str) -> Result<bool>;
+
+    /// Checks if the table is empty.
     fn is_empty(&self) -> Result<bool>;
 
+    /// Gets the number of entries in the table. \
+    /// aliases: [`len()`](#method.len)
     fn size(&self) -> Result<usize>;
+
+    /// Checks if the table contains the given key. \
+    /// aliases: [`contains_key()`](#method.contains_key), [`has()`](#method.has)
     fn contains(&self, key: &str) -> Result<bool>;
+
+    /// Checks if the table contains the given key. \
+    /// aliases: [`contains()`](#method.contains), [`has()`](#method.has)
     fn has(&self, key: &str) -> Result<bool>;
 }
 
+/// A trait for writing to a table
 pub trait TableWriteInterface {
+    /// Inserts a value into the table with the given key. \
+    /// aliases: [`set()`](#method.set)
     fn insert<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()>;
+
+    /// Removes the value associated with the given key. \
+    /// aliases: [`delete()`](#method.delete)
     fn remove(&mut self, key: &str) -> Result<()>;
+
+    /// Clears the table. \
+    /// aliases: [`reset()`](#method.reset)
     fn clear(&mut self) -> Result<()>;
 
+    /// Inserts a value into the table with the given key. \
+    /// aliases: [`insert()`](#method.insert)
     fn set<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()>;
+
+    /// Removes the value associated with the given key. \
+    /// aliases: [`remove()`](#method.remove)
     fn delete(&mut self, key: &str) -> Result<()>;
+
+    /// Clears the table. \
+    /// aliases: [`clear()`](#method.clear)
     fn reset(&mut self) -> Result<()>;
 }
 
+/// A read-only handle to a table
 pub struct Table<'a> {
     pub(crate) store: &'a Store,
     pub(crate) name: &'a str,
 }
 
+/// A read-write handle to a table
 pub struct TableMut<'a> {
     pub(crate) store: &'a mut Store,
     pub(crate) name: &'a str,

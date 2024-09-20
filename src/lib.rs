@@ -1,3 +1,120 @@
+#![deny(missing_docs)]
+
+//! # dbless
+//! A simple key-value store for rust apps that don't need a full-flagged database.
+//!
+//!
+//! heavily inspired be [bevy_pkv](https://crates.io/crates/bevy_pkv),
+//! based on [redb](https://crates.io/crates/redb) and [rmp-serde](https://crates.io/crates/rmp-serde).
+//!
+//! ## Features
+//! - Simple and easy to use, with mininal boilerplate.
+//! - Works with any type that implement `serde::Serialize` and `serde::Deserialize`.
+//! - Has an in-memory backend if the data doesn't need to be saved to disk.
+//! - Can have multiple tables.
+//!
+//! ## Examples
+//! #### Hello world
+//! ```no_run
+//! use dbless::Database;
+//!
+//! // traits needed to use set and get methods
+//! use dbless::{TableReadInterface, TableWriteInterface};
+//!
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let mut db = Database::open("my_database.db")?;
+//!
+//!     db.set("key", &"Hello, world!")?;
+//!     let value: Option<String> = db.get("key")?;
+//!     db.remove("key")?;
+//!     println!("{:?}", value);
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! #### Using with types that implement `serde::Serialize` and `serde::Deserialize`
+//! ```no_run
+//! use dbless::{Database, TableReadInterface, TableWriteInterface};
+//! use serde::{Serialize, Deserialize};
+//!
+//! #[derive(Serialize, Deserialize, Debug)]
+//! struct User {
+//!     username: String,
+//!     role: Role,
+//! }
+//!
+//! #[derive(Serialize, Deserialize, Debug)]
+//! enum Role {
+//!     Admin,
+//!     User,
+//!     Guest,
+//! }
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // in-memory database instead of a file
+//!     let mut db = Database::memory();
+//!
+//!     db.set("user1", &User {
+//!         username: "admin-1".to_string(),
+//!         role: Role::Admin,
+//!     })?;
+//!
+//!     db.set("user2", &User {
+//!         username: "user-69".to_string(),
+//!         role: Role::User,
+//!     })?;
+//!
+//!     db.set("user3", &User {
+//!         username: "guest-420".to_string(),
+//!         role: Role::Guest,
+//!     })?;
+//!     
+//!     let users: Vec<User> = db.values()?;
+//!     println!("{:?}", users);
+//!
+//!     Ok(())
+//! }
+//! ```
+//! #### Multiple tables
+//! ```no_run
+//! use dbless::{Database, TableReadInterface, TableWriteInterface};
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let mut db = Database::memory();
+//!
+//!     db.set("msg", &"Hello from main table")?;
+//!     db.table_mut("table1").set("msg", &"Hello from table 1")?;
+//!     db.table_mut("table2").set("msg", &"Hello from table 2")?;
+//!
+//!     let msg1 = db.get::<String>("msg")?;
+//!     println!("{:?}", msg1);
+//!
+//!     let msg2 = db.table("table1").get::<String>("msg")?;
+//!     println!("{:?}", msg2);
+//!
+//!     let msg3 = db.table("table2").get::<String>("msg")?;
+//!     println!("{:?}", msg3);
+//!     
+//!     Ok(())
+//! }
+//! ```
+//!
+//! Check [`Database`](struct.Database.html) for all methods and their documentation.
+//!
+//! ## About the default table
+//! Using methods from [`TableReadInterface`](trait.TableReadInterface.html) and [`TableWriteInterface`](trait.TableWriteInterface.html) directly on [`Database`](struct.Database.html) \
+//! uses a default table named `#_#_main_dbless_table_#_#`.
+//!
+//! calling [`clear()`](struct.Database.html#method.clear) or [`reset()`](struct.Database.html#method.reset) will only clear this table, not the entire database, \
+//! to clear the entire database, use [`clear_all_tables()`](struct.Database.html#method.clear_all_tables) or [`reset_all_tables()`](struct.Database.html#method.reset_all_tables).
+//!
+//! similarly, calling [`len()`](struct.Database.html#method.len) or [`size()`](struct.Database.html#method.size) will only count the number of entries in this table, \
+//! to count the number of entries in the entire database, use [`len_all_tables()`](struct.Database.html#method.len_all_tables) or [`size_all_tables()`](struct.Database.html#method.size_all_tables).
+//!
+//!
+
 mod store;
 use store::{Store, StoreInterface};
 
@@ -15,27 +132,34 @@ use serde::{DeserializeOwned, Serialize};
 
 const MAIN_TABLE: &str = "#_#_main_dbless_table_#_#";
 
+/// A Database
 pub struct Database {
     store: Store,
 }
 
 impl Database {
+    /// Opens a file at the given path and uses it as the database.
+    /// If the file doesn't exist, it will be created.
     pub fn open(path: &str) -> Result<Self> {
         Ok(Database {
             store: Store::Redb(store::redb::Store::new(path)?),
         })
     }
 
+    /// Opens an in-memory database.
+    /// Useful for tests and as a stub for a database that doesn't need to be saved to disk.
     pub fn memory() -> Self {
         Database {
             store: Store::Memory(store::memory::Store::new()),
         }
     }
 
+    /// Closes the databas
     pub fn close(self) {
         drop(self);
     }
 
+    /// Get a read-only handle to a table with the given name.
     pub fn table<'a>(&'a self, name: &'a str) -> Table<'a> {
         Table {
             store: &self.store,
@@ -43,6 +167,7 @@ impl Database {
         }
     }
 
+    /// Get a read-write handle to a table with the given name.
     pub fn table_mut<'a>(&'a mut self, name: &'a str) -> TableMut<'a> {
         TableMut {
             store: &mut self.store,
@@ -50,6 +175,8 @@ impl Database {
         }
     }
 
+    /// Returns a list of the names of all tables in the database.
+    #[doc(hidden)] // needs more testing and consideration, especially with empty tables
     pub fn list_tables(&self) -> Result<Vec<String>> {
         Ok(self
             .store
@@ -59,18 +186,26 @@ impl Database {
             .collect())
     }
 
+    /// Returns the number of entries in all tables in the database. \
+    /// aliases: [`size_all_tables()`](#method.size_all_tables)
     pub fn len_all_tables(&self) -> Result<usize> {
         self.store.len_all_tables()
     }
 
+    /// Returns the number of entries in all tables in the database. \
+    /// aliases: [`len_all_tables()`](#method.len_all_tables)
     pub fn size_all_tables(&self) -> Result<usize> {
         self.len_all_tables()
     }
 
+    /// Clears all tables in the database. \
+    /// aliases: [`reset_all_tables()`](#method.reset_all_tables)
     pub fn clear_all_tables(&mut self) -> Result<()> {
         self.store.clear_all_tables()
     }
 
+    /// Clears all tables in the database. \
+    /// aliases: [`clear_all_tables()`](#method.clear_all_tables)
     pub fn reset_all_tables(&mut self) -> Result<()> {
         self.clear_all_tables()
     }
