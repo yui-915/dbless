@@ -126,9 +126,7 @@ mod tests;
 pub use table::{Table, TableMut, TableReadInterface, TableWriteInterface};
 
 use anyhow::Result;
-
-mod serde;
-use serde::{DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 
 const MAIN_TABLE: &str = "#_#_main_dbless_table_#_#";
 

@@ -1,9 +1,19 @@
-use crate::serde::{deserialize, serialize, DeserializeOwned, Serialize};
 use anyhow::Result;
 use redb::{backends::InMemoryBackend, Builder, Database, TableError, TableHandle};
 use redb::{ReadableTable, ReadableTableMetadata, TableDefinition};
+use serde::{de::DeserializeOwned, Serialize};
 
 pub struct Store(Database);
+
+fn serialize<T: Serialize>(value: &T) -> Result<Vec<u8>> {
+    let mut serializer = rmp_serde::Serializer::new(vec![]).with_struct_map();
+    value.serialize(&mut serializer)?;
+    Ok(serializer.into_inner())
+}
+
+fn deserialize<T: DeserializeOwned>(value: &[u8]) -> Result<T> {
+    Ok(rmp_serde::from_slice(value)?)
+}
 
 macro_rules! open_table_read_or {
     ($tnx:expr, $table:expr, $or:expr) => {
