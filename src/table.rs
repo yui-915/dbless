@@ -142,7 +142,7 @@ impl<'a> TableReadInterface for Table<'a> {
     }
 
     fn is_empty(&self) -> Result<bool> {
-        self.store.is_empty(self.name)
+        Ok(self.store.len(self.name)? == 0)
     }
 
     fn contains_key(&self, key: &str) -> Result<bool> {

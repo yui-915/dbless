@@ -135,10 +135,6 @@ impl Store {
         Ok(table.get(key)?.is_some())
     }
 
-    pub fn is_empty(&self, table: &str) -> Result<bool> {
-        Ok(self.len(table)? == 0)
-    }
-
     pub fn list_tables(&self) -> Result<Vec<String>> {
         let db = &self.0;
         let tnx = db.begin_read()?;
