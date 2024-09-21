@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use anyhow::Result;
 use redb::{backends::InMemoryBackend, Builder, Database, TableError, TableHandle};
 use redb::{ReadableTable, ReadableTableMetadata, TableDefinition};
@@ -28,7 +30,7 @@ macro_rules! open_table_read_or {
 }
 
 impl Store {
-    pub fn file(path: &str) -> Result<Self> {
+    pub fn file(path: impl AsRef<Path>) -> Result<Self> {
         let db = Database::create(path)?;
         Ok(Store(db))
     }

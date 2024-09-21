@@ -11,6 +11,8 @@
 //! to count the number of entries in the entire database, use [`len_all_tables()`](struct.Database.html#method.len_all_tables) or [`size_all_tables()`](struct.Database.html#method.size_all_tables).
 
 mod store;
+use std::path::Path;
+
 use store::Store;
 
 mod table;
@@ -33,7 +35,7 @@ pub struct Database {
 impl Database {
     /// Opens a file at the given path and uses it as the database.
     /// If the file doesn't exist, it will be created.
-    pub fn open(path: &str) -> Result<Self> {
+    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         Ok(Database {
             store: Store::file(path)?,
         })
