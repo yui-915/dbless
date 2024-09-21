@@ -6,46 +6,168 @@ use crate::store::Store;
 /// A trait for reading from a table
 pub trait TableReadInterface {
     /// Gets the value associated with the given key.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let value1: Option<String> = db.get("key")?;
+    /// let value2 = db.get::<String>("key2")?;
+    /// println!("got values: {:?}, {:?}", value1, value2);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn get<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>>;
 
     /// Gets a list of all keys in the table.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let keys = db.keys()?;
+    /// for key in keys {
+    ///     println!("{}", key);
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn keys(&self) -> Result<Vec<String>>;
 
     /// Gets a list of all values in the table (that can be deserialized into the given type).
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let values = db.values::<String>()?;
+    /// for value in values {
+    ///     println!("{}", value);
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn values<T: DeserializeOwned>(&self) -> Result<Vec<T>>;
 
     /// Gets a list of all entries in the table (that can be deserialized into the given type).
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let entries = db.entries::<i32>()?;
+    /// for (key, value) in entries {
+    ///     println!("{}: {}", key, value);
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn entries<T: DeserializeOwned>(&self) -> Result<Vec<(String, T)>>;
 
     /// Gets the number of entries in the table. \
     /// aliases: [`size()`](#method.size)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let len = db.len()?;
+    /// println!("the default table has {} entries", len);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn len(&self) -> Result<usize>;
 
     /// Checks if the table contains the given key. \
     /// aliases: [`contains()`](#method.contains), [`has()`](#method.has)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let contains = db.contains_key("key")?;
+    /// if contains {
+    ///     println!("the default table contains the key");
+    /// } else {
+    ///     println!("the default table does not contain the key");
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn contains_key(&self, key: &str) -> Result<bool>;
 
     /// Checks if the table is empty.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let is_empty = db.is_empty()?;
+    /// if is_empty {
+    ///     println!("the default table is empty");
+    /// } else {
+    ///     println!("the default table is not empty");
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn is_empty(&self) -> Result<bool>;
 
     /// Gets the number of entries in the table. \
     /// aliases: [`len()`](#method.len)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let size = db.size()?;
+    /// println!("the default table has {} entries", size);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn size(&self) -> Result<usize>;
 
     /// Checks if the table contains the given key. \
     /// aliases: [`contains_key()`](#method.contains_key), [`has()`](#method.has)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let contains = db.contains("key")?;
+    /// if contains {
+    ///     println!("the default table contains the key");
+    /// } else {
+    ///     println!("the default table does not contain the key");
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn contains(&self, key: &str) -> Result<bool>;
 
     /// Checks if the table contains the given key. \
     /// aliases: [`contains()`](#method.contains), [`has()`](#method.has)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let has = db.has("key")?;
+    /// if has {
+    ///     println!("the default table contains the key");
+    /// } else {
+    ///     println!("the default table does not contain the key");
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn has(&self, key: &str) -> Result<bool>;
 
     /// Gets the value associated with the given key, \
     /// if an error occurs, or no value is found, returns the given default value.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let value = db.get_or("my_number", 69)?;
+    /// println!("got nice number maybe: {}", value);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn get_or<T: DeserializeOwned>(&self, key: &str, default: T) -> Result<T>;
 
     /// Gets the value associated with the given key, \
     /// if an error occurs, or no value is found, calls the given closure and returns the result.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let value = db.get_or_else("my_number", || {
+    ///     // some expensive calculation that needs to be done lazily
+    ///     20 + 400
+    /// })?;
+    /// println!("got not as nice number maybe: {}", value);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn get_or_else<T: DeserializeOwned, F: FnOnce() -> T>(
         &self,
         key: &str,
@@ -55,6 +177,14 @@ pub trait TableReadInterface {
     /// Gets the value associated with the given key, \
     /// if an error occurs, or no value is found, returns the default value for the given type.
     /// if no value is found, returns the default value for the given type.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let value = db.get_or_default::<i32>("my_number")?;
+    /// println!("got zero maybe: {}", value);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn get_or_default<T: DeserializeOwned + Default>(&self, key: &str) -> Result<T>;
 }
 
@@ -62,30 +192,94 @@ pub trait TableReadInterface {
 pub trait TableWriteInterface {
     /// Inserts a value into the table with the given key. \
     /// aliases: [`set()`](#method.set)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableWriteInterface;
+    /// let mut db = Database::open("my_database.db")?;
+    /// db.insert("key", &"value")?;
+    /// db.insert("key2", &1234)?;
+    /// db.insert("key3", &true)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn insert<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()>;
 
     /// Removes the value associated with the given key. \
     /// aliases: [`delete()`](#method.delete)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// # use dbless::TableWriteInterface;
+    /// let mut db = Database::open("my_database.db")?;
+    /// db.remove("key")?;
+    /// assert!(!db.contains_key("key")?);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn remove(&mut self, key: &str) -> Result<()>;
 
     /// Clears the table. \
     /// aliases: [`reset()`](#method.reset)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// # use dbless::TableWriteInterface;
+    /// let mut db = Database::open("my_database.db")?;
+    /// db.clear()?;
+    /// assert!(db.is_empty()?);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn clear(&mut self) -> Result<()>;
 
     /// Inserts a value into the table with the given key. \
     /// aliases: [`insert()`](#method.insert)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableWriteInterface;
+    /// let mut db = Database::open("my_database.db")?;
+    /// db.set("key", &"value")?;
+    /// db.set("key2", &1234)?;
+    /// db.set("key3", &true)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn set<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()>;
 
     /// Removes the value associated with the given key. \
     /// aliases: [`remove()`](#method.remove)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// # use dbless::TableWriteInterface;
+    /// let mut db = Database::open("my_database.db")?;
+    /// db.delete("key")?;
+    /// assert!(!db.contains_key("key")?);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn delete(&mut self, key: &str) -> Result<()>;
 
     /// Clears the table. \
     /// aliases: [`clear()`](#method.clear)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// # use dbless::TableWriteInterface;
+    /// let mut db = Database::open("my_database.db")?;
+    /// db.reset()?;
+    /// assert!(db.is_empty()?);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn reset(&mut self) -> Result<()>;
 
     /// Gets the value associated with the given key, \
     /// if the no value is found, inserts the given default value into the table and returns it.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// # use dbless::TableWriteInterface;
+    /// let mut db = Database::open("my_database.db")?;
+    /// let value = db.get_or_insert("key", "default".to_owned())?;
+    /// println!("got default maybe: {}", value);
+    /// assert!(db.contains_key("key")?);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn get_or_insert<T: Serialize + DeserializeOwned>(
         &mut self,
         key: &str,
@@ -94,6 +288,19 @@ pub trait TableWriteInterface {
 
     /// Gets the value associated with the given key, \
     /// if the no value is found, inserts the result of the given closure into the table and returns it.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// # use dbless::TableWriteInterface;
+    /// let mut db = Database::open("my_database.db")?;
+    /// let value = db.get_or_insert_with("key", || {
+    ///     // some expensive calculation that needs to be done lazily
+    ///     "Hello, world!".to_owned()
+    /// })?;
+    /// println!("got hello maybe: {}", value);
+    /// assert!(db.contains_key("key")?);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn get_or_insert_with<T: Serialize + DeserializeOwned, F: FnOnce() -> T>(
         &mut self,
         key: &str,
@@ -102,6 +309,16 @@ pub trait TableWriteInterface {
 
     /// Gets the value associated with the given key, \
     /// if the no value is found, inserts the default value for the given type into the table and returns it.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// # use dbless::TableWriteInterface;
+    /// let mut db = Database::open("my_database.db")?;
+    /// let value = db.get_or_insert_default::<i32>("key")?;
+    /// println!("got zero maybe: {}", value);
+    /// assert!(db.contains_key("key")?);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     fn get_or_insert_default<T: Serialize + DeserializeOwned + Default>(
         &mut self,
         key: &str,

@@ -33,16 +33,26 @@ pub struct Database {
 }
 
 impl Database {
-    /// Opens a file at the given path and uses it as the database.
+    /// Opens a file at the given path and uses it as the database. \
     /// If the file doesn't exist, it will be created.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// let db = Database::open("my_database.db")?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         Ok(Database {
             store: Store::file(path)?,
         })
     }
 
-    /// Opens an in-memory database.
+    /// Opens an in-memory database. \
     /// Useful for tests and as a stub for a database that doesn't need to be saved to disk.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// let db = Database::in_memory()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn in_memory() -> Result<Self> {
         Ok(Database {
             store: Store::in_memory()?,
@@ -50,11 +60,26 @@ impl Database {
     }
 
     /// Closes the databas
+    /// ```no_run
+    /// # use dbless::Database;
+    /// let db = Database::open("my_database.db")?;
+    /// db.close();
+    /// // why ?
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn close(self) {
         drop(self);
     }
 
     /// Get a read-only handle to a table with the given name.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let value = db.table("my_table").get("key")?;
+    /// # let tmp: Option<String> = value;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn table<'a>(&'a self, name: &'a str) -> Table<'a> {
         Table {
             store: &self.store,
@@ -63,6 +88,13 @@ impl Database {
     }
 
     /// Get a read-write handle to a table with the given name.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableWriteInterface;
+    /// let mut db = Database::open("my_database.db")?;
+    /// db.table_mut("my_table").set("key", &"value")?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn table_mut<'a>(&'a mut self, name: &'a str) -> TableMut<'a> {
         TableMut {
             store: &mut self.store,
@@ -71,6 +103,15 @@ impl Database {
     }
 
     /// Returns a list of the names of all tables in the database.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// let db = Database::open("my_database.db")?;
+    /// let tables = db.list_tables()?;
+    /// for table in tables {
+    ///     println!("{}", table);
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn list_tables(&self) -> Result<Vec<String>> {
         Ok(self
             .store
@@ -81,24 +122,50 @@ impl Database {
     }
 
     /// Deletes a table from the database.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// let mut db = Database::open("my_database.db")?;
+    /// db.delete_table("my_table")?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn delete_table(&mut self, name: &str) -> Result<()> {
         self.store.delete_table(name)
     }
 
     /// Returns the number of entries in all tables in the database. \
     /// aliases: [`size_all_tables()`](#method.size_all_tables)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// let db = Database::open("my_database.db")?;
+    /// let len = db.len_all_tables()?;
+    /// println!("the database has {} entries across all tables", len);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn len_all_tables(&self) -> Result<usize> {
         self.store.len_all_tables()
     }
 
     /// Returns the number of entries in all tables in the database. \
     /// aliases: [`len_all_tables()`](#method.len_all_tables)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// let db = Database::open("my_database.db")?;
+    /// let size = db.size_all_tables()?;
+    /// println!("the database has {} entries across all tables", size);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn size_all_tables(&self) -> Result<usize> {
         self.len_all_tables()
     }
 
     /// Deletes all tables in the database. \
-    /// aliases: [`reset_all_tables()`](#method.reset_all_tables)
+    /// ```no_run
+    /// # use dbless::Database;
+    /// let mut db = Database::open("my_database.db")?;
+    /// db.delete_all_tables()?;
+    /// assert!(db.list_tables()?.is_empty());
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn delete_all_tables(&mut self) -> Result<()> {
         self.store.delete_all_tables()
     }

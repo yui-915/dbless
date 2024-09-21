@@ -105,4 +105,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-Check [`Database`](https://docs.rs/dbless/latest/dbless/struct.Database.html) for all methods and their documentation.
+For all methods with their documentation/examples, check:
+- [`Database`](https://docs.rs/dbless/latest/dbless/struct.Database.html).
+- [`TableReadInterface`](https://docs.rs/dbless/latest/dbless/trait.TableReadInterface.html).
+- [`TableWriteInterface`](https://docs.rs/dbless/latest/dbless/trait.TableWriteInterface.html).
