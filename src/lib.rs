@@ -142,6 +142,22 @@ impl TableReadInterface for Database {
     fn has(&self, key: &str) -> Result<bool> {
         self.table(MAIN_TABLE).has(key)
     }
+
+    fn get_or<T: DeserializeOwned>(&self, key: &str, default: T) -> Result<T> {
+        self.table(MAIN_TABLE).get_or(key, default)
+    }
+
+    fn get_or_else<T: DeserializeOwned, F: FnOnce() -> T>(
+        &self,
+        key: &str,
+        default: F,
+    ) -> Result<T> {
+        self.table(MAIN_TABLE).get_or_else(key, default)
+    }
+
+    fn get_or_default<T: DeserializeOwned + Default>(&self, key: &str) -> Result<T> {
+        self.table(MAIN_TABLE).get_or_default(key)
+    }
 }
 
 impl TableWriteInterface for Database {
@@ -167,5 +183,28 @@ impl TableWriteInterface for Database {
 
     fn reset(&mut self) -> Result<()> {
         self.clear()
+    }
+
+    fn get_or_insert<T: Serialize + DeserializeOwned>(
+        &mut self,
+        key: &str,
+        default: T,
+    ) -> Result<T> {
+        self.table_mut(MAIN_TABLE).get_or_insert(key, default)
+    }
+
+    fn get_or_insert_with<T: Serialize + DeserializeOwned, F: FnOnce() -> T>(
+        &mut self,
+        key: &str,
+        default: F,
+    ) -> Result<T> {
+        self.table_mut(MAIN_TABLE).get_or_insert_with(key, default)
+    }
+
+    fn get_or_insert_default<T: Serialize + DeserializeOwned + Default>(
+        &mut self,
+        key: &str,
+    ) -> Result<T> {
+        self.table_mut(MAIN_TABLE).get_or_insert_default(key)
     }
 }

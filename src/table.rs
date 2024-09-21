@@ -39,6 +39,23 @@ pub trait TableReadInterface {
     /// Checks if the table contains the given key. \
     /// aliases: [`contains()`](#method.contains), [`has()`](#method.has)
     fn has(&self, key: &str) -> Result<bool>;
+
+    /// Gets the value associated with the given key, \
+    /// if an error occurs, or no value is found, returns the given default value.
+    fn get_or<T: DeserializeOwned>(&self, key: &str, default: T) -> Result<T>;
+
+    /// Gets the value associated with the given key, \
+    /// if an error occurs, or no value is found, calls the given closure and returns the result.
+    fn get_or_else<T: DeserializeOwned, F: FnOnce() -> T>(
+        &self,
+        key: &str,
+        default: F,
+    ) -> Result<T>;
+
+    /// Gets the value associated with the given key, \
+    /// if an error occurs, or no value is found, returns the default value for the given type.
+    /// if no value is found, returns the default value for the given type.
+    fn get_or_default<T: DeserializeOwned + Default>(&self, key: &str) -> Result<T>;
 }
 
 /// A trait for writing to a table
@@ -66,6 +83,29 @@ pub trait TableWriteInterface {
     /// Clears the table. \
     /// aliases: [`clear()`](#method.clear)
     fn reset(&mut self) -> Result<()>;
+
+    /// Gets the value associated with the given key, \
+    /// if the no value is found, inserts the given default value into the table and returns it.
+    fn get_or_insert<T: Serialize + DeserializeOwned>(
+        &mut self,
+        key: &str,
+        default: T,
+    ) -> Result<T>;
+
+    /// Gets the value associated with the given key, \
+    /// if the no value is found, inserts the result of the given closure into the table and returns it.
+    fn get_or_insert_with<T: Serialize + DeserializeOwned, F: FnOnce() -> T>(
+        &mut self,
+        key: &str,
+        default: F,
+    ) -> Result<T>;
+
+    /// Gets the value associated with the given key, \
+    /// if the no value is found, inserts the default value for the given type into the table and returns it.
+    fn get_or_insert_default<T: Serialize + DeserializeOwned + Default>(
+        &mut self,
+        key: &str,
+    ) -> Result<T>;
 }
 
 /// A read-only handle to a table
@@ -120,6 +160,22 @@ impl<'a> TableReadInterface for Table<'a> {
     fn has(&self, key: &str) -> Result<bool> {
         self.contains_key(key)
     }
+
+    fn get_or<T: DeserializeOwned>(&self, key: &str, default: T) -> Result<T> {
+        Ok(self.get(key)?.unwrap_or(default))
+    }
+
+    fn get_or_else<T: DeserializeOwned, F: FnOnce() -> T>(
+        &self,
+        key: &str,
+        default: F,
+    ) -> Result<T> {
+        Ok(self.get(key)?.unwrap_or_else(default))
+    }
+
+    fn get_or_default<T: DeserializeOwned + Default>(&self, key: &str) -> Result<T> {
+        self.get_or_else(key, T::default)
+    }
 }
 
 impl<'a> TableReadInterface for TableMut<'a> {
@@ -162,6 +218,22 @@ impl<'a> TableReadInterface for TableMut<'a> {
     fn has(&self, key: &str) -> Result<bool> {
         Into::<Table>::into(self).has(key)
     }
+
+    fn get_or<T: DeserializeOwned>(&self, key: &str, default: T) -> Result<T> {
+        Into::<Table>::into(self).get_or(key, default)
+    }
+
+    fn get_or_else<T: DeserializeOwned, F: FnOnce() -> T>(
+        &self,
+        key: &str,
+        default: F,
+    ) -> Result<T> {
+        Into::<Table>::into(self).get_or_else(key, default)
+    }
+
+    fn get_or_default<T: DeserializeOwned + Default>(&self, key: &str) -> Result<T> {
+        Into::<Table>::into(self).get_or_default(key)
+    }
 }
 
 impl<'a> TableWriteInterface for TableMut<'a> {
@@ -187,6 +259,36 @@ impl<'a> TableWriteInterface for TableMut<'a> {
 
     fn reset(&mut self) -> Result<()> {
         self.clear()
+    }
+
+    fn get_or_insert<T: Serialize + DeserializeOwned>(
+        &mut self,
+        key: &str,
+        default: T,
+    ) -> Result<T> {
+        self.get_or_insert_with(key, move || default)
+    }
+
+    fn get_or_insert_with<T: Serialize + DeserializeOwned, F: FnOnce() -> T>(
+        &mut self,
+        key: &str,
+        default: F,
+    ) -> Result<T> {
+        match self.get(key)? {
+            Some(value) => Ok(value),
+            None => {
+                let default = default();
+                self.insert(key, &default)?;
+                Ok(default)
+            }
+        }
+    }
+
+    fn get_or_insert_default<T: Serialize + DeserializeOwned + Default>(
+        &mut self,
+        key: &str,
+    ) -> Result<T> {
+        self.get_or_insert_with(key, T::default)
     }
 }
 
