@@ -240,6 +240,57 @@ fn serde() -> TestResult {
     })
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+struct MyStr(String);
+impl Default for MyStr {
+    fn default() -> Self {
+        MyStr("default".to_owned())
+    }
+}
+
+#[test]
+fn get_or() -> TestResult {
+    test_db_and_tables!(|db| {
+        assert_eq!(db.get_or("key", "default".to_owned())?, "default");
+        db.set("key", &"value")?;
+        assert_eq!(db.get_or("key", "default".to_owned())?, "value");
+
+        assert_eq!(db.get_or_else("key2", || "default".to_owned())?, "default");
+        db.set("key2", &"value2")?;
+        assert_eq!(
+            db.get_or_else::<String, _>("key2", || panic!("should not be called"))?,
+            "value2"
+        );
+
+        assert_eq!(db.get_or_default::<MyStr>("key3")?, MyStr::default());
+        db.set("key3", &MyStr("value3".to_owned()))?;
+        assert_eq!(
+            db.get_or_default::<MyStr>("key3")?,
+            MyStr("value3".to_owned())
+        );
+    })
+}
+
+#[test]
+fn get_or_insert() -> TestResult {
+    test_db_and_tables!(|db| {
+        assert_eq!(db.get_or_insert("key", "default".to_owned())?, "default");
+        assert_eq!(db.get_or_insert("key", "hello".to_owned())?, "default");
+
+        assert_eq!(
+            db.get_or_insert_with("key2", || "default".to_owned())?,
+            "default"
+        );
+        assert_eq!(
+            db.get_or_insert_with::<String, _>("key2", || panic!("should not be called"))?,
+            "default"
+        );
+
+        assert_eq!(db.get_or_insert_default::<MyStr>("key3")?, MyStr::default());
+        assert!(db.get::<MyStr>("key3")?.is_some());
+    })
+}
+
 #[run_after_tests]
 fn delete_test_db() {
     let _ = std::fs::remove_file(TEST_DB_NAME);
