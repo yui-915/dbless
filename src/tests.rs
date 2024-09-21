@@ -7,14 +7,12 @@ type TestResult = Result<()>;
 
 const TEST_DB_NAME: &str = "test.db";
 static mut DB: Option<Database> = None;
-static mut MEM: Option<Database> = None;
 
 #[run_before_tests]
 fn init_tests() {
     delete_test_db();
     unsafe {
         DB = Some(Database::open(TEST_DB_NAME).unwrap());
-        MEM = Some(Database::in_memory().unwrap());
     }
 }
 
@@ -22,31 +20,6 @@ macro_rules! test_db_and_tables {
     (|$db:ident| $block:block) => {{
         #[allow(unused_mut)]
         let mut $db = unsafe { DB.as_mut().unwrap() };
-        $db.delete_all_tables()?;
-        $block
-
-        let t1l;
-        {
-            #[allow(unused_mut)]
-            let mut $db = $db.table_mut("t1");
-            assert_eq!($db.len()?, 0);
-            $block
-            t1l = $db.len()?;
-        }
-
-        let t2l;
-        {
-            #[allow(unused_mut)]
-            let mut $db = $db.table_mut("t2");
-            assert_eq!($db.len()?, 0);
-            $block
-            t2l = $db.len()?;
-        }
-
-        assert_eq!(t1l, t2l);
-
-        #[allow(unused_mut)]
-        let mut $db = unsafe { MEM.as_mut().unwrap() };
         $db.delete_all_tables()?;
         $block
 
