@@ -59,7 +59,7 @@ impl Database {
         })
     }
 
-    /// Closes the databas
+    /// Closes the database
     /// ```no_run
     /// # use dbless::Database;
     /// let db = Database::open("my_database.db")?;
