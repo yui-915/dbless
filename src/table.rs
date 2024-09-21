@@ -178,61 +178,40 @@ impl<'a> TableReadInterface for Table<'a> {
     }
 }
 
+macro_rules! mirror_methods_with_into {
+    {$into:ident; $(fn $name:ident$(<$($gname:ident: $gty1:ident $(+$gtyr:ident)*),+>)?(&self $(,$pname:ident: $pty:ty)*) -> $ret:ty;)*} => {
+        $(
+            fn $name$(<$($gname: $gty1$(+$gtyr)*),+>)?(&self, $($pname: $pty),*) -> $ret {
+                Into::<$into>::into(self).$name($($pname),*)
+            }
+        )*
+    }
+}
+
 impl<'a> TableReadInterface for TableMut<'a> {
-    fn get<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>> {
-        Into::<Table>::into(self).get(key)
+    mirror_methods_with_into! {
+        Table;
+        fn get<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>>;
+        fn keys(&self) -> Result<Vec<String>> ;
+        fn values<T: DeserializeOwned>(&self) -> Result<Vec<T>> ;
+        fn entries<T: DeserializeOwned>(&self) -> Result<Vec<(String, T)>> ;
+        fn len(&self) -> Result<usize> ;
+        fn is_empty(&self) -> Result<bool> ;
+        fn contains_key(&self, key: &str) -> Result<bool> ;
+        fn size(&self) -> Result<usize> ;
+        fn contains(&self, key: &str) -> Result<bool> ;
+        fn has(&self, key: &str) -> Result<bool> ;
+        fn get_or<T: DeserializeOwned>(&self, key: &str, default: T) -> Result<T> ;
+        fn get_or_default<T: DeserializeOwned + Default>(&self, key: &str) -> Result<T> ;
     }
 
-    fn keys(&self) -> Result<Vec<String>> {
-        Into::<Table>::into(self).keys()
-    }
-
-    fn values<T: DeserializeOwned>(&self) -> Result<Vec<T>> {
-        Into::<Table>::into(self).values()
-    }
-
-    fn entries<T: DeserializeOwned>(&self) -> Result<Vec<(String, T)>> {
-        Into::<Table>::into(self).entries()
-    }
-
-    fn len(&self) -> Result<usize> {
-        Into::<Table>::into(self).len()
-    }
-
-    fn is_empty(&self) -> Result<bool> {
-        Into::<Table>::into(self).is_empty()
-    }
-
-    fn contains_key(&self, key: &str) -> Result<bool> {
-        Into::<Table>::into(self).contains_key(key)
-    }
-
-    fn size(&self) -> Result<usize> {
-        Into::<Table>::into(self).size()
-    }
-
-    fn contains(&self, key: &str) -> Result<bool> {
-        Into::<Table>::into(self).contains(key)
-    }
-
-    fn has(&self, key: &str) -> Result<bool> {
-        Into::<Table>::into(self).has(key)
-    }
-
-    fn get_or<T: DeserializeOwned>(&self, key: &str, default: T) -> Result<T> {
-        Into::<Table>::into(self).get_or(key, default)
-    }
-
+    // current macro can't handle FnOnce() -> T
     fn get_or_else<T: DeserializeOwned, F: FnOnce() -> T>(
         &self,
         key: &str,
         default: F,
     ) -> Result<T> {
         Into::<Table>::into(self).get_or_else(key, default)
-    }
-
-    fn get_or_default<T: DeserializeOwned + Default>(&self, key: &str) -> Result<T> {
-        Into::<Table>::into(self).get_or_default(key)
     }
 }
 

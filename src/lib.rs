@@ -102,51 +102,44 @@ impl Database {
     }
 }
 
+macro_rules! mirror_methods_with {
+    {self.$fn:ident($arg:expr); $(fn $name:ident$(<$($gname:ident: $gty1:ident $(+$gtyr:ident)*),+>)?(&self $(,$pname:ident: $pty:ty)*) -> $ret:ty;)*} => {
+        $(
+            fn $name$(<$($gname: $gty1$(+$gtyr)*),+>)?(&self, $($pname: $pty),*) -> $ret {
+                self.$fn($arg).$name($($pname),*)
+            }
+        )*
+    }
+}
+
+macro_rules! mirror_methods_mut_with {
+    {self.$fn:ident($arg:expr); $(fn $name:ident$(<$($gname:ident: $gty1:ident $(+$gtyr:ident)*),+>)?(&mut self $(,$pname:ident: $pty:ty)*) -> $ret:ty;)*} => {
+        $(
+            fn $name$(<$($gname: $gty1$(+$gtyr)*),+>)?(&mut self, $($pname: $pty),*) -> $ret {
+                self.$fn($arg).$name($($pname),*)
+            }
+        )*
+    }
+}
+
 impl TableReadInterface for Database {
-    fn get<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>> {
-        self.table(MAIN_TABLE).get(key)
+    mirror_methods_with! {
+        self.table(MAIN_TABLE);
+        fn get<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>>;
+        fn keys(&self) -> Result<Vec<String>> ;
+        fn values<T: DeserializeOwned>(&self) -> Result<Vec<T>> ;
+        fn entries<T: DeserializeOwned>(&self) -> Result<Vec<(String, T)>> ;
+        fn len(&self) -> Result<usize> ;
+        fn is_empty(&self) -> Result<bool> ;
+        fn contains_key(&self, key: &str) -> Result<bool> ;
+        fn size(&self) -> Result<usize> ;
+        fn contains(&self, key: &str) -> Result<bool> ;
+        fn has(&self, key: &str) -> Result<bool> ;
+        fn get_or<T: DeserializeOwned>(&self, key: &str, default: T) -> Result<T> ;
+        fn get_or_default<T: DeserializeOwned + Default>(&self, key: &str) -> Result<T> ;
     }
 
-    fn keys(&self) -> Result<Vec<String>> {
-        self.table(MAIN_TABLE).keys()
-    }
-
-    fn values<T: DeserializeOwned>(&self) -> Result<Vec<T>> {
-        self.table(MAIN_TABLE).values()
-    }
-
-    fn entries<T: DeserializeOwned>(&self) -> Result<Vec<(String, T)>> {
-        self.table(MAIN_TABLE).entries()
-    }
-
-    fn len(&self) -> Result<usize> {
-        self.table(MAIN_TABLE).len()
-    }
-
-    fn is_empty(&self) -> Result<bool> {
-        self.table(MAIN_TABLE).is_empty()
-    }
-
-    fn contains_key(&self, key: &str) -> Result<bool> {
-        self.table(MAIN_TABLE).contains_key(key)
-    }
-
-    fn size(&self) -> Result<usize> {
-        self.table(MAIN_TABLE).size()
-    }
-
-    fn contains(&self, key: &str) -> Result<bool> {
-        self.table(MAIN_TABLE).contains(key)
-    }
-
-    fn has(&self, key: &str) -> Result<bool> {
-        self.table(MAIN_TABLE).has(key)
-    }
-
-    fn get_or<T: DeserializeOwned>(&self, key: &str, default: T) -> Result<T> {
-        self.table(MAIN_TABLE).get_or(key, default)
-    }
-
+    // current macro can't handle FnOnce() -> T
     fn get_or_else<T: DeserializeOwned, F: FnOnce() -> T>(
         &self,
         key: &str,
@@ -154,57 +147,27 @@ impl TableReadInterface for Database {
     ) -> Result<T> {
         self.table(MAIN_TABLE).get_or_else(key, default)
     }
-
-    fn get_or_default<T: DeserializeOwned + Default>(&self, key: &str) -> Result<T> {
-        self.table(MAIN_TABLE).get_or_default(key)
-    }
 }
 
 impl TableWriteInterface for Database {
-    fn insert<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()> {
-        self.table_mut(MAIN_TABLE).insert(key, value)
+    mirror_methods_mut_with! {
+        self.table_mut(MAIN_TABLE);
+        fn insert<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()>;
+        fn remove(&mut self, key: &str) -> Result<()>;
+        fn clear(&mut self) -> Result<()>;
+        fn set<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()>;
+        fn delete(&mut self, key: &str) -> Result<()>;
+        fn reset(&mut self) -> Result<()>;
+        fn get_or_insert<T: Serialize + DeserializeOwned>(&mut self, key: &str, default: T) -> Result<T>;
+        fn get_or_insert_default<T: Serialize + DeserializeOwned + Default>(&mut self, key: &str) -> Result<T>;
     }
 
-    fn remove(&mut self, key: &str) -> Result<()> {
-        self.table_mut(MAIN_TABLE).remove(key)
-    }
-
-    fn clear(&mut self) -> Result<()> {
-        self.table_mut(MAIN_TABLE).clear()
-    }
-
-    fn set<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()> {
-        self.insert(key, value)
-    }
-
-    fn delete(&mut self, key: &str) -> Result<()> {
-        self.remove(key)
-    }
-
-    fn reset(&mut self) -> Result<()> {
-        self.clear()
-    }
-
-    fn get_or_insert<T: Serialize + DeserializeOwned>(
-        &mut self,
-        key: &str,
-        default: T,
-    ) -> Result<T> {
-        self.table_mut(MAIN_TABLE).get_or_insert(key, default)
-    }
-
+    // current macro can't handle FnOnce() -> T
     fn get_or_insert_with<T: Serialize + DeserializeOwned, F: FnOnce() -> T>(
         &mut self,
         key: &str,
         default: F,
     ) -> Result<T> {
         self.table_mut(MAIN_TABLE).get_or_insert_with(key, default)
-    }
-
-    fn get_or_insert_default<T: Serialize + DeserializeOwned + Default>(
-        &mut self,
-        key: &str,
-    ) -> Result<T> {
-        self.table_mut(MAIN_TABLE).get_or_insert_default(key)
     }
 }
