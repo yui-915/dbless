@@ -25,11 +25,12 @@ pub use table::{Table, TableMut, TableReadInterface, TableWriteInterface};
 use anyhow::Result;
 use serde::{de::DeserializeOwned, Serialize};
 
-const MAIN_TABLE: &str = "#_#_main_dbless_table_#_#";
+const DEFAULT_DEFAULT_TABLE: &str = "#_#_main_dbless_table_#_#";
 
 /// A Database
 pub struct Database {
     store: Store,
+    default_table: String,
 }
 
 impl Database {
@@ -43,6 +44,7 @@ impl Database {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         Ok(Database {
             store: Store::file(path)?,
+            default_table: String::from(DEFAULT_DEFAULT_TABLE),
         })
     }
 
@@ -56,6 +58,7 @@ impl Database {
     pub fn in_memory() -> Result<Self> {
         Ok(Database {
             store: Store::in_memory()?,
+            default_table: String::from(DEFAULT_DEFAULT_TABLE),
         })
     }
 
@@ -117,7 +120,7 @@ impl Database {
             .store
             .list_tables()?
             .into_iter()
-            .filter(|t| t != MAIN_TABLE)
+            .filter(|t| t != &self.default_table)
             .collect())
     }
 
@@ -169,23 +172,36 @@ impl Database {
     pub fn delete_all_tables(&mut self) -> Result<()> {
         self.store.delete_all_tables()
     }
+
+    /// Set the default table name.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// let mut db = Database::open("my_database.db")?;
+    /// db.set_default_table("my_table");
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn set_default_table(&mut self, name: &str) {
+        self.default_table = String::from(name);
+    }
 }
 
 macro_rules! mirror_methods_with {
-    {self.$fn:ident($arg:expr); $(fn $name:ident$(<$($gname:ident: $gty1:ident $(+$gtyr:ident)*),+>)?(&self $(,$pname:ident: $pty:ty)*) -> $ret:ty;)*} => {
+    {with .$fn:ident(...); $(fn $name:ident$(<$($gname:ident: $gty1:ident $(+$gtyr:ident)*),+>)?(&self $(,$pname:ident: $pty:ty)*) -> $ret:ty;)*} => {
         $(
             fn $name$(<$($gname: $gty1$(+$gtyr)*),+>)?(&self, $($pname: $pty),*) -> $ret {
-                self.$fn($arg).$name($($pname),*)
+                let table = &self.default_table;
+                self.$fn(table).$name($($pname),*)
             }
         )*
     }
 }
 
 macro_rules! mirror_methods_mut_with {
-    {self.$fn:ident($arg:expr); $(fn $name:ident$(<$($gname:ident: $gty1:ident $(+$gtyr:ident)*),+>)?(&mut self $(,$pname:ident: $pty:ty)*) -> $ret:ty;)*} => {
+    {with .$fn:ident(...); $(fn $name:ident$(<$($gname:ident: $gty1:ident $(+$gtyr:ident)*),+>)?(&mut self $(,$pname:ident: $pty:ty)*) -> $ret:ty;)*} => {
         $(
             fn $name$(<$($gname: $gty1$(+$gtyr)*),+>)?(&mut self, $($pname: $pty),*) -> $ret {
-                self.$fn($arg).$name($($pname),*)
+                let table = &self.default_table.clone();
+                self.$fn(table).$name($($pname),*)
             }
         )*
     }
@@ -193,7 +209,7 @@ macro_rules! mirror_methods_mut_with {
 
 impl TableReadInterface for Database {
     mirror_methods_with! {
-        self.table(MAIN_TABLE);
+        with .table(...);
         fn get<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>>;
         fn keys(&self) -> Result<Vec<String>> ;
         fn values<T: DeserializeOwned>(&self) -> Result<Vec<T>> ;
@@ -214,13 +230,14 @@ impl TableReadInterface for Database {
         key: &str,
         default: F,
     ) -> Result<T> {
-        self.table(MAIN_TABLE).get_or_else(key, default)
+        let table = &self.default_table;
+        self.table(table).get_or_else(key, default)
     }
 }
 
 impl TableWriteInterface for Database {
     mirror_methods_mut_with! {
-        self.table_mut(MAIN_TABLE);
+        with .table_mut(...);
         fn insert<T: Serialize>(&mut self, key: &str, value: &T) -> Result<()>;
         fn remove(&mut self, key: &str) -> Result<()>;
         fn clear(&mut self) -> Result<()>;
@@ -237,6 +254,7 @@ impl TableWriteInterface for Database {
         key: &str,
         default: F,
     ) -> Result<T> {
-        self.table_mut(MAIN_TABLE).get_or_insert_with(key, default)
+        let table = &self.default_table.clone();
+        self.table_mut(table).get_or_insert_with(key, default)
     }
 }

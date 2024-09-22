@@ -291,6 +291,25 @@ fn get_or_insert() -> TestResult {
     })
 }
 
+#[test]
+fn default_table() -> TestResult {
+    let db = unsafe { DB.as_mut().unwrap() };
+    db.delete_all_tables()?;
+    db.set_default_table("t1");
+    db.set("key", &"value")?;
+    db.set_default_table("t2");
+    assert!(!db.contains("key")?);
+    db.default_table_mut().set("key", &"value2")?;
+    db.set_default_table("t1");
+    assert_eq!(db.get::<String>("key")?, Some("value".to_owned()));
+    db.set_default_table("t2");
+    assert_eq!(db.get::<String>("key")?, Some("value2".to_owned()));
+
+    // needed to not break the other tests
+    db.set_default_table("idk_what_the_default_table_was");
+    Ok(())
+}
+
 #[run_after_tests]
 fn delete_test_db() {
     let _ = std::fs::remove_file(TEST_DB_NAME);
