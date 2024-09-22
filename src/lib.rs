@@ -105,7 +105,8 @@ impl Database {
         }
     }
 
-    /// Returns a list of the names of all tables in the database.
+    /// Returns a list of the names of all tables in the database. \
+    /// This list does not include the default table.
     /// ```no_run
     /// # use dbless::Database;
     /// let db = Database::open("my_database.db")?;
