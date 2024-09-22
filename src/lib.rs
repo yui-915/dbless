@@ -173,6 +173,40 @@ impl Database {
         self.store.delete_all_tables()
     }
 
+    /// Get a read-only handle to the default table.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableReadInterface;
+    /// let db = Database::open("my_database.db")?;
+    /// let value = db.default_table().get("key")?;
+    /// let also_value = db.get("key")?;
+    /// assert_eq!(value, also_value);
+    /// # let tmp: Option<String> = value;
+    /// # let tmp: Option<String> = also_value;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn default_table(&self) -> Table {
+        Table {
+            store: &self.store,
+            name: &self.default_table,
+        }
+    }
+
+    /// Get a read-write handle to the default table.
+    /// ```no_run
+    /// # use dbless::Database;
+    /// # use dbless::TableWriteInterface;
+    /// let mut db = Database::open("my_database.db")?;
+    /// db.default_table_mut().set("key", &"value")?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn default_table_mut(&mut self) -> TableMut {
+        TableMut {
+            store: &mut self.store,
+            name: &self.default_table,
+        }
+    }
+
     /// Set the default table name.
     /// ```no_run
     /// # use dbless::Database;
