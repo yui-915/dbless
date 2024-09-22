@@ -505,3 +505,17 @@ impl<'a> From<&'a TableMut<'a>> for Table<'a> {
         }
     }
 }
+
+impl<'a> Table<'a> {
+    /// Gets the name of the table
+    pub fn name(&self) -> &str {
+        self.name
+    }
+}
+
+impl<'a> TableMut<'a> {
+    /// Gets the name of the table
+    pub fn name(&self) -> &str {
+        self.name
+    }
+}
