@@ -14,7 +14,7 @@ based on [redb](https://crates.io/crates/redb) and [rmp-serde](https://crates.io
 
 ## Examples
 
-#### Hello world
+Hello world
 
 ```rust
 use dbless::Database;
@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-#### Using with types that implement `serde::Serialize` and `serde::Deserialize`
+Using with types that implement `serde::Serialize` and `serde::Deserialize`
 
 ```rust
 use dbless::{Database, TableReadInterface, TableWriteInterface};
@@ -80,7 +80,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-#### Multiple tables
+Multiple tables
 
 ```rust
 use dbless::{Database, TableReadInterface, TableWriteInterface};
@@ -109,3 +109,17 @@ For all methods with their documentation/examples, check:
 - [`Database`](https://docs.rs/dbless/latest/dbless/struct.Database.html).
 - [`TableReadInterface`](https://docs.rs/dbless/latest/dbless/trait.TableReadInterface.html).
 - [`TableWriteInterface`](https://docs.rs/dbless/latest/dbless/trait.TableWriteInterface.html).
+
+### About the default table
+Using methods from [`TableReadInterface`](trait.TableReadInterface.html) and [`TableWriteInterface`](trait.TableWriteInterface.html) directly on [`Database`](struct.Database.html) \
+uses a default table named `#_#_main_dbless_table_#_#`.
+
+calling [`clear()`](struct.Database.html#method.clear) or [`reset()`](struct.Database.html#method.reset) will only clear this table, not the entire database, \
+to clear the entire database, use [`delete_all_tables()`](struct.Database.html#method.delete_all_tables)
+
+similarly, calling [`len()`](struct.Database.html#method.len) or [`size()`](struct.Database.html#method.size) will only count the number of entries in this table, \
+to count the number of entries in the entire database, use [`len_all_tables()`](struct.Database.html#method.len_all_tables) or [`size_all_tables()`](struct.Database.html#method.size_all_tables).
+
+---
+
+License: MIT OR Apache-2.0
